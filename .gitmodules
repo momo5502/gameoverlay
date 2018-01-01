@@ -1,0 +1,3 @@
+[submodule "deps/literally"]
+	path = deps/literally
+	url = https://github.com/momo5502/literally.git
