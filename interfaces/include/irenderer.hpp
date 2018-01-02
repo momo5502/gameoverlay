@@ -4,10 +4,10 @@
 
 namespace gameoverlay
 {
-	class backend
+	class irenderer
 	{
 	public:
-		virtual ~backend() {};
+		virtual ~irenderer() {};
 
 		virtual bool is_available() = 0;
 
@@ -17,5 +17,5 @@ namespace gameoverlay
 		virtual void register_frame_callback(std::function<void()> callback) = 0;
 	};
 
-	typedef backend* __cdecl create_backend();
+	typedef irenderer* __cdecl create_interface();
 }
