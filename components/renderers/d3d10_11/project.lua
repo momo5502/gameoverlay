@@ -1,4 +1,4 @@
-	project "overlay"
+	project "renderer_d3d10_11"
 		kind "SharedLib"
 		language "C++"
 

@@ -30,7 +30,7 @@ namespace gameoverlay
 
 	void renderer_handler::load_renderers()
 	{
-		for (auto& lib : "./backend/"_files.filter(".*\\.dll"))
+		for (auto& lib : "./renderers/"_files.filter("renderer_.*\\.dll"))
 		{
 			auto new_renderer = std::make_shared<renderer>(dynlib{ lib });
 			if (*new_renderer)

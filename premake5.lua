@@ -11,13 +11,16 @@ workspace "gameoverlay"
 	configurations { "Debug", "Release" }
 	platforms { "Win32", "Win64" }
 	
-	require "components/overlay/project"
-
 	project "*"
 		includedirs {
 			"interfaces/include",
 			"deps/literally/include"
 		}
+	
+	require "components/overlay/project"
+	
+	group "Renderers"
+		require "components/renderers/d3d10_11/project"
 
 workspace "*"
 	location "./build"
