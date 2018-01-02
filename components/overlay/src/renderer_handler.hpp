@@ -1,24 +1,29 @@
 #pragma once
 
+#include <literally/io.hpp>
+#include <literally/library.hpp>
+#include <irenderer.hpp>
+
 namespace gameoverlay
 {
 	class renderer
 	{
 	public:
-		renderer(dynlib library);
+		renderer(literally::dynlib library);
 		~renderer();
 
 		operator bool();
 
-		dynlib library;
+		literally::dynlib library;
 		irenderer* iface = nullptr;
 	};
 
 	class renderer_handler
 	{
 	public:
-		renderer_handler();
+		static void load_renderers();
+		static void unload_renderers();
 
-		std::vector<std::shared_ptr<renderer>> renderers;
+		static std::vector<std::shared_ptr<renderer>> renderers;
 	};
 }

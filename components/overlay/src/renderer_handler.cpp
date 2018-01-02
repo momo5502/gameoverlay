@@ -1,16 +1,12 @@
 #include "std_include.hpp"
-
-#include <literally/io.hpp>
-#include <literally/library.hpp>
+#include "renderer_handler.hpp"
 
 using namespace literally;
 
-#include <irenderer.hpp>
-
-#include "renderer_handler.hpp"
-
 namespace gameoverlay
 {
+	std::vector<std::shared_ptr<renderer>> renderer_handler::renderers;
+
 	renderer::renderer(dynlib _library) : library(_library)
 	{
 		if (this->library)
@@ -32,15 +28,20 @@ namespace gameoverlay
 		return this->library && this->iface;
 	}
 
-	renderer_handler::renderer_handler()
+	void renderer_handler::load_renderers()
 	{
 		for (auto& lib : "./backend/"_files.filter(".*\\.dll"))
 		{
 			auto new_renderer = std::make_shared<renderer>(dynlib{ lib });
 			if (*new_renderer)
 			{
-				this->renderers.push_back(new_renderer);
+				renderer_handler::renderers.push_back(new_renderer);
 			}
 		}
+	}
+
+	void renderer_handler::unload_renderers()
+	{
+		renderer_handler::renderers.clear();
 	}
 }
