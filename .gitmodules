@@ -1,3 +1,18 @@
 [submodule "deps/literally"]
 	path = deps/literally
 	url = https://github.com/momo5502/literally.git
+[submodule "deps/minhook"]
+	path = deps/minhook
+	url = https://github.com/TsudaKageyu/minhook
+[submodule "deps/fx11"]
+	path = deps/fx11
+	url = https://github.com/Microsoft/FX11.git
+[submodule "deps/directxtk"]
+	path = deps/directxtk
+	url = https://github.com/Microsoft/DirectXTK.git
+[submodule "deps/glew"]
+	path = deps/glew
+	url = https://github.com/nigels-com/glew
+[submodule "deps/dxsdk"]
+	path = deps/dxsdk
+	url = https://github.com/apitrace/dxsdk
