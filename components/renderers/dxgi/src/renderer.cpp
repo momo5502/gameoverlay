@@ -24,7 +24,7 @@ namespace gameoverlay
 		return nullptr;
 	}
 
-	canvas* renderer::get_canvas()
+	icanvas* renderer::get_canvas()
 	{
 		return nullptr;
 	}

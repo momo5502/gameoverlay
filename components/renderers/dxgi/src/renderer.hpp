@@ -14,7 +14,7 @@ namespace gameoverlay
 		virtual bool is_available() override;
 
 		virtual HWND get_window() override;
-		virtual canvas* get_canvas() override;
+		virtual icanvas* get_canvas() override;
 
 		virtual void register_frame_callback(std::function<void()> callback) override;
 		virtual void unregister_frame_callback() override;

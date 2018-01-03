@@ -2,10 +2,10 @@
 
 namespace gameoverlay
 {
-	class canvas
+	class icanvas
 	{
 	public:
-		virtual ~canvas() {};
+		virtual ~icanvas() {};
 
 		virtual bool is_available() = 0;
 
