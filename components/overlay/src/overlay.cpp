@@ -2,6 +2,8 @@
 #include "renderer_handler.hpp"
 #include "overlay.hpp"
 
+using namespace literally::library;
+
 namespace gameoverlay
 {
 	void overlay::initialize()

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <irenderer.hpp>
+#include "dxgi_hook.hpp"
 
 namespace gameoverlay
 {
@@ -16,5 +17,14 @@ namespace gameoverlay
 		virtual canvas* get_canvas() override;
 
 		virtual void register_frame_callback(std::function<void()> callback) override;
+		virtual void unregister_frame_callback() override;
+
+		void frame_callback();
+
+	private:
+		dxgi_hook hook;
+
+		bool presented = false;
+		std::function<void()> callback;
 	};
 }

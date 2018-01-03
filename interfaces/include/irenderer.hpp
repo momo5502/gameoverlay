@@ -15,6 +15,7 @@ namespace gameoverlay
 		virtual canvas* get_canvas() = 0;
 
 		virtual void register_frame_callback(std::function<void()> callback) = 0;
+		virtual void unregister_frame_callback() = 0;
 	};
 
 	typedef irenderer* __cdecl create_interface_t();

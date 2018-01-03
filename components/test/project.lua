@@ -8,7 +8,7 @@
 		}
 
 		postbuildcommands {
-			"mkdir \"%{wks.location}runtime\"",
+			"if not exist \"%{wks.location}runtime\" mkdir \"%{wks.location}runtime\"",
 			"copy /y \"$(TargetPath)\" \"%{wks.location}runtime\"",
 		}
 

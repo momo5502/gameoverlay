@@ -7,6 +7,10 @@ newoption {
 	value = "PATH"
 }
 
+require "deps/premake/fx11"
+require "deps/premake/directxtk"
+require "deps/premake/minhook"
+
 workspace "gameoverlay"
 	configurations { "Debug", "Release" }
 	platforms { "Win32", "Win64" }
@@ -16,12 +20,21 @@ workspace "gameoverlay"
 			"interfaces/include",
 			"deps/literally/include"
 		}
+		
+		fx11.import()
+		directxtk.import()
+		minhook.import()
 	
 	require "components/test/project"
 	require "components/overlay/project"
 	
 	group "Renderers"
-		require "components/renderers/d3d10_11/project"
+		require "components/renderers/dxgi/project"
+		
+	group "Dependencies"
+		fx11.project()
+		directxtk.project()
+		minhook.project()
 
 workspace "*"
 	location "./build"

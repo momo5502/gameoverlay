@@ -1,4 +1,4 @@
-	project "renderer_d3d10_11"
+	project "renderer_dxgi"
 		kind "SharedLib"
 		language "C++"
 
@@ -8,7 +8,8 @@
 		}
 
 		postbuildcommands {
-			"mkdir \"%{wks.location}runtime\\renderers\"",
+			"if not exist \"%{wks.location}runtime\" mkdir \"%{wks.location}runtime\"",
+			"if not exist \"%{wks.location}runtime\\renderers\" mkdir \"%{wks.location}runtime\\renderers\"",
 			"copy /y \"$(TargetPath)\" \"%{wks.location}runtime\\renderers\"",
 		}
 		

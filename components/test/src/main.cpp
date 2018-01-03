@@ -1,5 +1,4 @@
 #include "std_include.hpp"
-
 #include <literally/library.hpp>
 
 int main()
