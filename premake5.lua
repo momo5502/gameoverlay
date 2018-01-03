@@ -17,6 +17,7 @@ workspace "gameoverlay"
 			"deps/literally/include"
 		}
 	
+	require "components/test/project"
 	require "components/overlay/project"
 	
 	group "Renderers"

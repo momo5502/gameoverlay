@@ -17,5 +17,5 @@ namespace gameoverlay
 		virtual void register_frame_callback(std::function<void()> callback) = 0;
 	};
 
-	typedef irenderer* __cdecl create_interface();
+	typedef irenderer* __cdecl create_interface_t();
 }

@@ -1,6 +1,7 @@
 #define _HAS_CXX17 1
 
 #include <windows.h>
+#include <conio.h>
 
 #include <string>
 #include <mutex>

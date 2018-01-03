@@ -7,6 +7,10 @@
 			"./src/**.cpp",
 		}
 
-		-- Pre-compiled header
-		pchheader "std_include.hpp" -- must be exactly same as used in #include directives
-		pchsource "src/std_include.cpp" -- real path
+		postbuildcommands {
+			"mkdir \"%{wks.location}runtime\\renderers\"",
+			"copy /y \"$(TargetPath)\" \"%{wks.location}runtime\\renderers\"",
+		}
+		
+		pchheader "std_include.hpp"
+		pchsource "src/std_include.cpp"

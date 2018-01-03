@@ -11,7 +11,7 @@ namespace gameoverlay
 	{
 		if (this->library)
 		{
-			if (auto creator = this->library.get<create_interface>("create_interface"))
+			if (auto creator = this->library.get<create_interface_t>("create_interface"))
 			{
 				this->iface = creator();
 			}
@@ -30,9 +30,12 @@ namespace gameoverlay
 
 	void renderer_handler::load_renderers()
 	{
-		for (auto& lib : "./renderers/"_files.filter("renderer_.*\\.dll"))
+		dynlib self = dynlib::get_by_address(renderer_handler::load_renderers);
+		auto search_path = std::experimental::filesystem::path(self.get_folder()) / "renderers/";
+
+		for (auto& lib : files(search_path.generic_string()).filter(".*renderer_.*\\.dll"))
 		{
-			auto new_renderer = std::make_shared<renderer>(dynlib{ lib });
+			auto new_renderer = std::make_shared<renderer>(dynlib::load(lib));
 			if (*new_renderer)
 			{
 				renderer_handler::renderers.push_back(new_renderer);

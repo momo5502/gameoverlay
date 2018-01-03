@@ -1,5 +1,5 @@
-	project "overlay"
-		kind "SharedLib"
+	project "test"
+		kind "ConsoleApp"
 		language "C++"
 
 		files {
