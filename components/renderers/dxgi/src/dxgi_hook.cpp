@@ -9,7 +9,7 @@
 
 #include <MinHook.h>
 
-#include "renderer.hpp"
+#include "dxgi_hook.hpp"
 
 namespace gameoverlay
 {
@@ -17,9 +17,9 @@ namespace gameoverlay
 
 	HRESULT WINAPI dxgi_hook::present(void* swap_chain, UINT sync_interval, UINT flags)
 	{
-		if(!this->original_present || !this->parent) return E_FAIL;
+		if(!this->original_present) return E_FAIL;
 
-		this->parent->frame_callback();
+		if (this->callback) this->callback(swap_chain);
 		return this->original_present(swap_chain, sync_interval, flags);
 	}
 
@@ -29,7 +29,12 @@ namespace gameoverlay
 		return dxgi_hook::instance->present(swap_chain, sync_interval, flags);
 	}
 
-	dxgi_hook::dxgi_hook(renderer* _parent) : parent(_parent)
+	void dxgi_hook::on_frame(std::function<void(void*)> _callback)
+	{
+		this->callback = _callback;
+	}
+
+	dxgi_hook::dxgi_hook()
 	{
 		dxgi_hook::instance = this;
 

@@ -5,58 +5,58 @@ namespace gameoverlay
 {
 	canvas_d3d11::canvas_d3d11()
 	{
-		this->resetResources();
+		this->reset_resources();
 	}
 
-	canvas_d3d11::canvas_d3d11(ID3D11Device* pDevice)
+	canvas_d3d11::canvas_d3d11(ID3D11Device* _device)
 	{
-		this->resetResources();
-		this->initialize(pDevice);
+		this->reset_resources();
+		this->initialize(_device);
 	}
 
 	canvas_d3d11::~canvas_d3d11()
 	{
-		this->releaseResources();
+		this->release_resources();
 	}
 
-	void canvas_d3d11::releaseResources()
+	void canvas_d3d11::release_resources()
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 
-		ReleaseResource(this->effect);
-		ReleaseResource(this->texture);
-		ReleaseResource(this->shader_resource_view);
-		ReleaseResource(this->index_buffer);
-		ReleaseResource(this->vertex_buffer);
-		ReleaseResource(this->input_layout);
-		ReleaseResource(this->depth_stencil_state);
-		ReleaseResource(this->blend_state);
-		ReleaseResource(this->shader_buffer);
-		ResetResource(this->device);
-		ResetResource(this->context);
+		release_resource(this->effect);
+		release_resource(this->texture);
+		release_resource(this->shader_resource_view);
+		release_resource(this->index_buffer);
+		release_resource(this->vertex_buffer);
+		release_resource(this->input_layout);
+		release_resource(this->depth_stencil_state);
+		release_resource(this->blend_state);
+		release_resource(this->shader_buffer);
+		reset_resource(this->device);
+		reset_resource(this->context);
 
-		this->freeBuffer();
+		this->free_buffer();
 	}
 
-	void canvas_d3d11::resetResources()
+	void canvas_d3d11::reset_resources()
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 
-		this->bytesPerPixel = 0;
-		this->requiresUpdate = false;
+		this->bytes_per_pixel = 0;
+		this->requires_update = false;
 
-		ResetResource(this->effect);
-		ResetResource(this->texture);
-		ResetResource(this->shader_resource_view);
-		ResetResource(this->index_buffer);
-		ResetResource(this->vertex_buffer);
-		ResetResource(this->input_layout);
-		ResetResource(this->depth_stencil_state);
-		ResetResource(this->blend_state);
-		ResetResource(this->shader_buffer);
-		ResetResource(this->device);
-		ResetResource(this->context);
-		ResetResource(this->buffer);
+		reset_resource(this->effect);
+		reset_resource(this->texture);
+		reset_resource(this->shader_resource_view);
+		reset_resource(this->index_buffer);
+		reset_resource(this->vertex_buffer);
+		reset_resource(this->input_layout);
+		reset_resource(this->depth_stencil_state);
+		reset_resource(this->blend_state);
+		reset_resource(this->shader_buffer);
+		reset_resource(this->device);
+		reset_resource(this->context);
+		reset_resource(this->buffer);
 	}
 
 	bool canvas_d3d11::create(std::string file)
@@ -64,14 +64,14 @@ namespace gameoverlay
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 
 		// Release old data
-		ReleaseResource(this->texture);
-		ReleaseResource(this->shader_resource_view);
+		release_resource(this->texture);
+		release_resource(this->shader_resource_view);
 
 		// Create ShaderResourceView from file
-		std::wstring wideFile(file.begin(), file.end());
-		if (FAILED(DirectX::CreateWICTextureFromFile(this->device, wideFile.data(), NULL, &this->shader_resource_view)) || !this->shader_resource_view)
+		std::wstring wide_file(file.begin(), file.end());
+		if (FAILED(DirectX::CreateWICTextureFromFile(this->device, wide_file.data(), NULL, &this->shader_resource_view)) || !this->shader_resource_view)
 		{
-			ReleaseResource(this->shader_resource_view);
+			release_resource(this->shader_resource_view);
 			return false;
 		}
 
@@ -97,8 +97,8 @@ namespace gameoverlay
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 
 		// Release old data
-		ReleaseResource(this->texture);
-		ReleaseResource(this->shader_resource_view);
+		release_resource(this->texture);
+		release_resource(this->shader_resource_view);
 
 		// Create Texture2D
 		D3D11_TEXTURE2D_DESC desc = { 0 };
@@ -114,19 +114,19 @@ namespace gameoverlay
 
 		if (FAILED(this->device->CreateTexture2D(&desc, NULL, &this->texture)) || !this->texture)
 		{
-			ReleaseResource(this->texture);
+			release_resource(this->texture);
 			return false;
 		}
 
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		srvDesc.Format = format;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = 1;
-		srvDesc.Texture2D.MostDetailedMip = 0;
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+		srv_desc.Format = format;
+		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srv_desc.Texture2D.MipLevels = 1;
+		srv_desc.Texture2D.MostDetailedMip = 0;
 
-		if (FAILED(this->device->CreateShaderResourceView(this->texture, &srvDesc, &this->shader_resource_view)) || !this->shader_resource_view)
+		if (FAILED(this->device->CreateShaderResourceView(this->texture, &srv_desc, &this->shader_resource_view)) || !this->shader_resource_view)
 		{
-			ReleaseResource(this->shader_resource_view);
+			release_resource(this->shader_resource_view);
 			return false;
 		}
 
@@ -136,14 +136,24 @@ namespace gameoverlay
 		D3D11_MAPPED_SUBRESOURCE texmap;
 		if (SUCCEEDED(this->context->Map(this->texture, 0, D3D11_MAP_WRITE_DISCARD, 0, &texmap)))
 		{
-			this->bytesPerPixel = texmap.RowPitch / this->width;
+			this->bytes_per_pixel = texmap.RowPitch / this->width;
 			this->context->Unmap(this->texture, 0);
 		}
 
-		this->freeBuffer();
-		this->buffer = new char[this->width * this->height * this->bytesPerPixel];
+		this->free_buffer();
+		this->buffer = new char[this->width * this->height * this->bytes_per_pixel];
 
-		return this->performUpdate(_buffer);
+		return this->perform_update(_buffer);
+	}
+
+	uint32_t canvas_d3d11::get_width()
+	{
+		return this->width;
+	}
+
+	uint32_t canvas_d3d11::get_height()
+	{
+		return this->height;
 	}
 
 	bool canvas_d3d11::resize(uint32_t _width, uint32_t _height)
@@ -175,8 +185,8 @@ namespace gameoverlay
 
 		if (_buffer)
 		{
-			std::memcpy(this->buffer, _buffer, this->width * this->height * this->bytesPerPixel);
-			this->requiresUpdate = true;
+			std::memcpy(this->buffer, _buffer, this->width * this->height * this->bytes_per_pixel);
+			this->requires_update = true;
 		}
 
 		return true;
@@ -188,14 +198,14 @@ namespace gameoverlay
 
 		if (callback)
 		{
-			callback(this->buffer, this->width, this->height, this->bytesPerPixel);
-			this->requiresUpdate = true;
+			callback(this->buffer, this->width, this->height, this->bytes_per_pixel);
+			this->requires_update = true;
 		}
 
 		return true;
 	}
 
-	bool canvas_d3d11::performUpdate(const void* _buffer)
+	bool canvas_d3d11::perform_update(const void* _buffer)
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 
@@ -213,7 +223,7 @@ namespace gameoverlay
 				{
 					for (uint32_t row = 0; row < this->height; ++row)
 					{
-						std::memcpy(PBYTE(texmap.pData) + row * texmap.RowPitch, PBYTE(_buffer) + (this->bytesPerPixel * this->width) * row, std::min(texmap.RowPitch, this->bytesPerPixel * this->width));
+						std::memcpy(PBYTE(texmap.pData) + row * texmap.RowPitch, PBYTE(_buffer) + (this->bytes_per_pixel * this->width) * row, std::min(texmap.RowPitch, this->bytes_per_pixel * this->width));
 					}
 
 					this->context->Unmap(this->texture, 0);
@@ -230,7 +240,7 @@ namespace gameoverlay
 				box.top = 0;
 				box.bottom = this->height;
 
-				this->context->UpdateSubresource(this->texture, 0, &box, _buffer, this->width * this->bytesPerPixel, this->width * this->height * this->bytesPerPixel);
+				this->context->UpdateSubresource(this->texture, 0, &box, _buffer, this->width * this->bytes_per_pixel, this->width * this->height * this->bytes_per_pixel);
 				success = true;
 			}
 		}
@@ -238,33 +248,33 @@ namespace gameoverlay
 		return success;
 	}
 
-	bool canvas_d3d11::initialize(ID3D11Device* pDevice)
+	bool canvas_d3d11::initialize(ID3D11Device* _device)
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 
-		this->releaseResources();
+		this->release_resources();
 
-		if (!pDevice) return false;
+		if (!_device) return false;
 
-		this->device = pDevice;
+		this->device = _device;
 		this->device->GetImmediateContext(&this->context);
 
-		return this->createResources();
+		return this->create_resources();
 	}
 
-	bool canvas_d3d11::createResources()
+	bool canvas_d3d11::create_resources()
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 
 		// Release used resources
-		ReleaseResource(this->effect);
-		ReleaseResource(this->shader_buffer);
-		ReleaseResource(this->vertex_buffer);
-		ReleaseResource(this->input_layout);
-		ReleaseResource(this->index_buffer);
+		release_resource(this->effect);
+		release_resource(this->shader_buffer);
+		release_resource(this->vertex_buffer);
+		release_resource(this->input_layout);
+		release_resource(this->index_buffer);
 
 		// Effect data
-		const char effectSrc[] =
+		static const char effect_src[] =
 			"Texture2D SpriteTex;"
 			"SamplerState samLinear {"
 			"     Filter = MIN_MAG_MIP_LINEAR;"
@@ -310,16 +320,16 @@ namespace gameoverlay
 		};
 
 		// Compile Effect
-		if (FAILED(D3DCompile(effectSrc, sizeof(effectSrc), 0, 0, 0, "SpriteTech", "fx_5_0", 0, 0, &this->shader_buffer, 0)) || !this->shader_buffer)
+		if (FAILED(D3DCompile(effect_src, sizeof(effect_src), 0, 0, 0, "SpriteTech", "fx_5_0", 0, 0, &this->shader_buffer, 0)) || !this->shader_buffer)
 		{
-			ReleaseResource(this->shader_buffer);
+			release_resource(this->shader_buffer);
 			return false;
 		}
 
 		// Create ShaderBuffer from compiled Effect
 		if (FAILED(D3DX11CreateEffectFromMemory(this->shader_buffer->GetBufferPointer(), this->shader_buffer->GetBufferSize(), 0, this->device, &this->effect)) || !this->effect)
 		{
-			ReleaseResource(this->effect);
+			release_resource(this->effect);
 			return false;
 		}
 
@@ -331,7 +341,7 @@ namespace gameoverlay
 		// Create InputLayout
 		if (FAILED(this->device->CreateInputLayout(layout, ARRAYSIZE(layout), passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, &this->input_layout)) || !this->input_layout)
 		{
-			ReleaseResource(this->input_layout);
+			release_resource(this->input_layout);
 			return false;
 		}
 
@@ -342,81 +352,81 @@ namespace gameoverlay
 			0, 2, 3,
 		};
 
-		D3D11_BUFFER_DESC indexBufferDesc;
-		ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
-		indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-		indexBufferDesc.ByteWidth = sizeof(DWORD) * 2 * 3;
-		indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		indexBufferDesc.CPUAccessFlags = 0;
-		indexBufferDesc.MiscFlags = 0;
+		D3D11_BUFFER_DESC index_buffer_desc;
+		ZeroMemory(&index_buffer_desc, sizeof(index_buffer_desc));
+		index_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
+		index_buffer_desc.ByteWidth = sizeof(DWORD) * 2 * 3;
+		index_buffer_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		index_buffer_desc.CPUAccessFlags = 0;
+		index_buffer_desc.MiscFlags = 0;
 
 		D3D11_SUBRESOURCE_DATA iinitData;
 		iinitData.pSysMem = indices;
 
-		if (FAILED(this->device->CreateBuffer(&indexBufferDesc, &iinitData, &this->index_buffer)) || !this->index_buffer)
+		if (FAILED(this->device->CreateBuffer(&index_buffer_desc, &iinitData, &this->index_buffer)) || !this->index_buffer)
 		{
-			ReleaseResource(this->index_buffer);
+			release_resource(this->index_buffer);
 			return false;
 		}
 
 		// Initialize vertex buffer
-		D3D11_BUFFER_DESC vertexBufferDesc;
-		ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
-		vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		vertexBufferDesc.ByteWidth = sizeof(canvas_d3d11::Vertex) * 4;
-		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		D3D11_BUFFER_DESC vertex_buffer_desc;
+		ZeroMemory(&vertex_buffer_desc, sizeof(vertex_buffer_desc));
+		vertex_buffer_desc.Usage = D3D11_USAGE_DYNAMIC;
+		vertex_buffer_desc.ByteWidth = sizeof(canvas_d3d11::vertex) * 4;
+		vertex_buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		vertex_buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-		if (FAILED(this->device->CreateBuffer(&vertexBufferDesc, NULL, &this->vertex_buffer)) || !this->vertex_buffer)
+		if (FAILED(this->device->CreateBuffer(&vertex_buffer_desc, NULL, &this->vertex_buffer)) || !this->vertex_buffer)
 		{
-			ReleaseResource(this->vertex_buffer);
+			release_resource(this->vertex_buffer);
 			return false;
 		}
 
-		D3D11_BLEND_DESC blendDesc;
-		ZeroMemory(&blendDesc, sizeof(D3D11_BLEND_DESC));
-		blendDesc.RenderTarget[0].BlendEnable = TRUE;
-		blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-		blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-		blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-		blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
-		blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-		blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		D3D11_BLEND_DESC blend_desc;
+		ZeroMemory(&blend_desc, sizeof(D3D11_BLEND_DESC));
+		blend_desc.RenderTarget[0].BlendEnable = TRUE;
+		blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+		blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+		blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
+		blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+		blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-		if (FAILED(this->device->CreateBlendState(&blendDesc, &this->blend_state)) || !this->blend_state)
+		if (FAILED(this->device->CreateBlendState(&blend_desc, &this->blend_state)) || !this->blend_state)
 		{
-			ReleaseResource(this->blend_state);
+			release_resource(this->blend_state);
 			return false;
 		}
 
-		D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-		ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
-		depthStencilDesc.DepthEnable = false;
-		depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-		depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
-		depthStencilDesc.StencilEnable = true;
-		depthStencilDesc.StencilReadMask = 0xFF;
-		depthStencilDesc.StencilWriteMask = 0xFF;
-		depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-		depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-		depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-		depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-		depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-		depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+		D3D11_DEPTH_STENCIL_DESC depth_stencil_desc;
+		ZeroMemory(&depth_stencil_desc, sizeof(depth_stencil_desc));
+		depth_stencil_desc.DepthEnable = false;
+		depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
+		depth_stencil_desc.StencilEnable = true;
+		depth_stencil_desc.StencilReadMask = 0xFF;
+		depth_stencil_desc.StencilWriteMask = 0xFF;
+		depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+		depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+		depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+		depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+		depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+		depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+		depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+		depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-		if (FAILED(this->device->CreateDepthStencilState(&depthStencilDesc, &this->depth_stencil_state)) || !this->depth_stencil_state)
+		if (FAILED(this->device->CreateDepthStencilState(&depth_stencil_desc, &this->depth_stencil_state)) || !this->depth_stencil_state)
 		{
-			ReleaseResource(this->depth_stencil_state);
+			release_resource(this->depth_stencil_state);
 			return false;
 		}
 
 		return true;
 	}
 
-	void canvas_d3d11::freeBuffer()
+	void canvas_d3d11::free_buffer()
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 
@@ -426,27 +436,27 @@ namespace gameoverlay
 			this->buffer = nullptr;
 		}
 
-		this->requiresUpdate = false;
+		this->requires_update = false;
 	}
 
-	bool canvas_d3d11::translateVertices(int32_t x, int32_t y, uint32_t _width, uint32_t _height, COLORREF color)
+	bool canvas_d3d11::translate_vertices(int32_t x, int32_t y, uint32_t _width, uint32_t _height, COLORREF color)
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 
-		UINT numViewports = 1;
+		UINT num_viewports = 1;
 		D3D11_VIEWPORT viewport;
-		D3D11_MAPPED_SUBRESOURCE mappedData;
+		D3D11_MAPPED_SUBRESOURCE mapped_data;
 
 		// Calculate VertexBuffer
-		if (!this->vertex_buffer || FAILED(this->context->Map(this->vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData))) return false;
+		if (!this->vertex_buffer || FAILED(this->context->Map(this->vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_data))) return false;
 
-		this->context->RSGetViewports(&numViewports, &viewport);
-		canvas_d3d11::Vertex* v = reinterpret_cast<canvas_d3d11::Vertex*>(mappedData.pData);
+		this->context->RSGetViewports(&num_viewports, &viewport);
+		canvas_d3d11::vertex* v = reinterpret_cast<canvas_d3d11::vertex*>(mapped_data.pData);
 
-		v[0] = canvas_d3d11::Vertex((2.0f * (float)x / viewport.Width - 1.0f), (1.0f - 2.0f * (float)y / viewport.Height), 0.5f, 0.0f, 0.0f, color); // Vertex 1
-		v[1] = canvas_d3d11::Vertex((2.0f * (float)(x + _width) / viewport.Width - 1.0f), (1.0f - 2.0f * (float)y / viewport.Height), 0.5f, 1.0f, 0.0f, color); // Vertex 2
-		v[2] = canvas_d3d11::Vertex((2.0f * (float)(x + _width) / viewport.Width - 1.0f), (1.0f - 2.0f * (float)(y + _height) / viewport.Height), 0.5f, 1.0f, 1.0f, color); // Vertex 3
-		v[3] = canvas_d3d11::Vertex((2.0f * (float)x / viewport.Width - 1.0f), (1.0f - 2.0f * (float)(y + _height) / viewport.Height), 0.5f, 0.0f, 1.0f, color); // Vertex 4
+		v[0] = canvas_d3d11::vertex((2.0f * (float)x / viewport.Width - 1.0f), (1.0f - 2.0f * (float)y / viewport.Height), 0.5f, 0.0f, 0.0f, color); // Vertex 1
+		v[1] = canvas_d3d11::vertex((2.0f * (float)(x + _width) / viewport.Width - 1.0f), (1.0f - 2.0f * (float)y / viewport.Height), 0.5f, 1.0f, 0.0f, color); // Vertex 2
+		v[2] = canvas_d3d11::vertex((2.0f * (float)(x + _width) / viewport.Width - 1.0f), (1.0f - 2.0f * (float)(y + _height) / viewport.Height), 0.5f, 1.0f, 1.0f, color); // Vertex 3
+		v[3] = canvas_d3d11::vertex((2.0f * (float)x / viewport.Width - 1.0f), (1.0f - 2.0f * (float)(y + _height) / viewport.Height), 0.5f, 0.0f, 1.0f, color); // Vertex 4
 
 		this->context->Unmap(this->vertex_buffer, 0);
 
@@ -464,17 +474,17 @@ namespace gameoverlay
 		if (!this->context) return;
 
 		UINT offset = 0;
-		UINT stride = sizeof(canvas_d3d11::Vertex);
+		UINT stride = sizeof(canvas_d3d11::vertex);
 
-		if (this->requiresUpdate)
+		if (this->requires_update)
 		{
-			this->performUpdate(this->buffer);
-			this->requiresUpdate = false;
+			this->perform_update(this->buffer);
+			this->requires_update = false;
 		}
 
-		canvas_d3d11::Context $(this->context);
+		canvas_d3d11::context_store $(this->context);
 
-		this->translateVertices(x, y, _width, _height, color);
+		this->translate_vertices(x, y, _width, _height, color);
 
 		const float blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
 		this->context->OMSetBlendState(this->blend_state, blendFactor, 0xffffffff);
@@ -488,25 +498,20 @@ namespace gameoverlay
 		this->context->DrawIndexed(6, 0, 0);
 	}
 
-	bool canvas_d3d11::isInitialized()
+	bool canvas_d3d11::is_initialized()
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 		return (this->device && this->context);
 	}
 
-	bool canvas_d3d11::isLoaded()
+	bool canvas_d3d11::is_loaded()
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 		return (this->texture && this->shader_resource_view);
 	}
 
-	ID3D11Texture2D* canvas_d3d11::getTexture()
+	ID3D11Texture2D* canvas_d3d11::get_texture()
 	{
 		return this->texture;
-	}
-
-	COLORREF canvas_d3d11::Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
-	{
-		return RGB(r, g, b) | (a << 24);
 	}
 }

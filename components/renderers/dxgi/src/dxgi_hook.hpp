@@ -6,13 +6,14 @@ namespace gameoverlay
 	class dxgi_hook
 	{
 	public:
-		dxgi_hook(renderer* parent);
+		dxgi_hook();
 		~dxgi_hook();
+
+		void on_frame(std::function<void(void*)> callback);
 
 	private:
 		static dxgi_hook* instance;
-
-		renderer* parent;
+		std::function<void(void*)> callback;
 
 		typedef HRESULT(WINAPI* present_t)(void*, UINT, UINT);
 		present_t original_present;

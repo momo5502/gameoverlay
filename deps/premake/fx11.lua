@@ -3,7 +3,7 @@ fx11 = {
 }
 
 function fx11.import()
-	links { "directxtk" }
+	links { "fx11" }
 	fx11.includes()
 end
 

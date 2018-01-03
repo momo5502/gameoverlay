@@ -1,5 +1,6 @@
 #pragma once
 
+#include <dxgi.h>
 #include <d3d11.h>
 
 #include <D3Dcompiler.h>
@@ -7,42 +8,44 @@
 #include <d3dx11Effect.h>
 #include <WICTextureLoader.h>
 
-#define ResetResource(resource) resource = NULL
-#define ReleaseResource(resource) if(resource) { resource->Release(); ResetResource(resource); }
+#include <icanvas.hpp>
+
+#define reset_resource(resource) resource = NULL
+#define release_resource(resource) if(resource) { resource->Release(); reset_resource(resource); }
 
 namespace gameoverlay
 {
-	class canvas_d3d11
+	class canvas_d3d11 : public icanvas
 	{
-		class Context
+		class context_store
 		{
 		public:
-			Context(ID3D11DeviceContext* _context) : context(_context)
+			context_store(ID3D11DeviceContext* _context) : context(_context)
 			{
 				this->context->AddRef();
-				this->context->OMGetDepthStencilState(&this->depthStencilState, &this->ref);
+				this->context->OMGetDepthStencilState(&this->depth_stencil_state, &this->ref);
 			}
 
-			~Context()
+			~context_store()
 			{
-				this->context->OMSetDepthStencilState(this->depthStencilState, this->ref);
+				this->context->OMSetDepthStencilState(this->depth_stencil_state, this->ref);
 				this->context->Release();
 			}
 
 		private:
 			UINT ref;
-			ID3D11DepthStencilState* depthStencilState;
+			ID3D11DepthStencilState* depth_stencil_state;
 
 			ID3D11DeviceContext* context;
 		};
 
-		struct Vertex
+		struct vertex
 		{
-			Vertex() {}
-			Vertex(float x, float y, float z, float u, float v, COLORREF col) : pos(x, y, z), texCoord(u, v), color(col) {}
+			vertex() {}
+			vertex(float x, float y, float z, float u, float v, COLORREF col) : pos(x, y, z), tex_coord(u, v), color(col) {}
 
 			DirectX::XMFLOAT3 pos;
-			DirectX::XMFLOAT2 texCoord;
+			DirectX::XMFLOAT2 tex_coord;
 			COLORREF color;
 		};
 
@@ -63,25 +66,30 @@ namespace gameoverlay
 		ID3DX11EffectTechnique*              effect_technique;
 		ID3DX11EffectShaderResourceVariable* effect_shader_resource_variable;
 
-		void resetResources();
-		bool createResources();
-		bool translateVertices(int32_t x, int32_t y, uint32_t width, uint32_t height, COLORREF color);
+		void reset_resources();
+		bool create_resources();
+		bool translate_vertices(int32_t x, int32_t y, uint32_t width, uint32_t height, COLORREF color);
 
-		void freeBuffer();
+		void free_buffer();
 
-		bool performUpdate(const void* buffer);
+		bool perform_update(const void* buffer);
 
 	public:
 		uint32_t width;
 		uint32_t height;
 
 		void* buffer;
-		bool requiresUpdate;
-		uint32_t bytesPerPixel;
+		bool requires_update;
+		uint32_t bytes_per_pixel;
 
 		canvas_d3d11();
-		canvas_d3d11(ID3D11Device* pDevice);
+		canvas_d3d11(ID3D11Device* device);
 		~canvas_d3d11();
+
+		virtual uint32_t get_width() override;
+		virtual uint32_t get_height() override;
+		virtual bool paint(const void* _buffer) override { return this->update(_buffer); }
+		virtual bool is_available() override { return this->is_initialized(); }
 
 		bool create(std::string file);
 		bool create(uint32_t width, uint32_t height, DXGI_FORMAT format, const void* buffer = NULL);
@@ -94,13 +102,11 @@ namespace gameoverlay
 		void draw(int32_t x, int32_t y, uint32_t width, uint32_t height, COLORREF color = -1);
 		void draw(int32_t x, int32_t y, COLORREF color = -1);
 
-		void releaseResources();
-		bool initialize(ID3D11Device* pDevice);
-		bool isInitialized();
-		bool isLoaded();
+		void release_resources();
+		bool initialize(ID3D11Device* device);
+		bool is_initialized();
+		bool is_loaded();
 
-		ID3D11Texture2D* getTexture();
-
-		static COLORREF Color(uint8_t r = -1, uint8_t g = -1, uint8_t b = -1, uint8_t a = -1);
+		ID3D11Texture2D* get_texture();
 	};
 }
