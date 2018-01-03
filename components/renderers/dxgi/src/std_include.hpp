@@ -1,5 +1,9 @@
 #define _HAS_CXX17 1
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include <windows.h>
 
 #include <string>

@@ -25,13 +25,13 @@ namespace gameoverlay
 
 		ReleaseResource(this->effect);
 		ReleaseResource(this->texture);
-		ReleaseResource(this->shaderResourceView);
-		ReleaseResource(this->indexBuffer);
-		ReleaseResource(this->vertexBuffer);
-		ReleaseResource(this->inputLayout);
-		ReleaseResource(this->depthStencilState);
-		ReleaseResource(this->blendState);
-		ReleaseResource(this->shaderBuffer);
+		ReleaseResource(this->shader_resource_view);
+		ReleaseResource(this->index_buffer);
+		ReleaseResource(this->vertex_buffer);
+		ReleaseResource(this->input_layout);
+		ReleaseResource(this->depth_stencil_state);
+		ReleaseResource(this->blend_state);
+		ReleaseResource(this->shader_buffer);
 		ResetResource(this->device);
 		ResetResource(this->context);
 
@@ -47,13 +47,13 @@ namespace gameoverlay
 
 		ResetResource(this->effect);
 		ResetResource(this->texture);
-		ResetResource(this->shaderResourceView);
-		ResetResource(this->indexBuffer);
-		ResetResource(this->vertexBuffer);
-		ResetResource(this->inputLayout);
-		ResetResource(this->depthStencilState);
-		ResetResource(this->blendState);
-		ResetResource(this->shaderBuffer);
+		ResetResource(this->shader_resource_view);
+		ResetResource(this->index_buffer);
+		ResetResource(this->vertex_buffer);
+		ResetResource(this->input_layout);
+		ResetResource(this->depth_stencil_state);
+		ResetResource(this->blend_state);
+		ResetResource(this->shader_buffer);
 		ResetResource(this->device);
 		ResetResource(this->context);
 		ResetResource(this->buffer);
@@ -65,18 +65,18 @@ namespace gameoverlay
 
 		// Release old data
 		ReleaseResource(this->texture);
-		ReleaseResource(this->shaderResourceView);
+		ReleaseResource(this->shader_resource_view);
 
 		// Create ShaderResourceView from file
 		std::wstring wideFile(file.begin(), file.end());
-		if (FAILED(DirectX::CreateWICTextureFromFile(this->device, wideFile.data(), NULL, &this->shaderResourceView)) || !this->shaderResourceView)
+		if (FAILED(DirectX::CreateWICTextureFromFile(this->device, wideFile.data(), NULL, &this->shader_resource_view)) || !this->shader_resource_view)
 		{
-			ReleaseResource(this->shaderResourceView);
+			ReleaseResource(this->shader_resource_view);
 			return false;
 		}
 
 		// Get Texture2D from ShaderResourceView
-		this->shaderResourceView->GetResource(reinterpret_cast<ID3D11Resource**>(&this->texture));
+		this->shader_resource_view->GetResource(reinterpret_cast<ID3D11Resource**>(&this->texture));
 		if (!this->texture)
 		{
 			return false;
@@ -98,7 +98,7 @@ namespace gameoverlay
 
 		// Release old data
 		ReleaseResource(this->texture);
-		ReleaseResource(this->shaderResourceView);
+		ReleaseResource(this->shader_resource_view);
 
 		// Create Texture2D
 		D3D11_TEXTURE2D_DESC desc = { 0 };
@@ -124,9 +124,9 @@ namespace gameoverlay
 		srvDesc.Texture2D.MipLevels = 1;
 		srvDesc.Texture2D.MostDetailedMip = 0;
 
-		if (FAILED(this->device->CreateShaderResourceView(this->texture, &srvDesc, &this->shaderResourceView)) || !this->shaderResourceView)
+		if (FAILED(this->device->CreateShaderResourceView(this->texture, &srvDesc, &this->shader_resource_view)) || !this->shader_resource_view)
 		{
-			ReleaseResource(this->shaderResourceView);
+			ReleaseResource(this->shader_resource_view);
 			return false;
 		}
 
@@ -141,7 +141,7 @@ namespace gameoverlay
 		}
 
 		this->freeBuffer();
-		this->buffer = this->allocator.allocate(this->width * this->height * this->bytesPerPixel);
+		this->buffer = new char[this->width * this->height * this->bytesPerPixel];
 
 		return this->performUpdate(_buffer);
 	}
@@ -258,10 +258,10 @@ namespace gameoverlay
 
 		// Release used resources
 		ReleaseResource(this->effect);
-		ReleaseResource(this->shaderBuffer);
-		ReleaseResource(this->vertexBuffer);
-		ReleaseResource(this->inputLayout);
-		ReleaseResource(this->indexBuffer);
+		ReleaseResource(this->shader_buffer);
+		ReleaseResource(this->vertex_buffer);
+		ReleaseResource(this->input_layout);
+		ReleaseResource(this->index_buffer);
 
 		// Effect data
 		const char effectSrc[] =
@@ -310,28 +310,28 @@ namespace gameoverlay
 		};
 
 		// Compile Effect
-		if (FAILED(D3DCompile(effectSrc, sizeof(effectSrc), 0, 0, 0, "SpriteTech", "fx_5_0", 0, 0, &this->shaderBuffer, 0)) || !this->shaderBuffer)
+		if (FAILED(D3DCompile(effectSrc, sizeof(effectSrc), 0, 0, 0, "SpriteTech", "fx_5_0", 0, 0, &this->shader_buffer, 0)) || !this->shader_buffer)
 		{
-			ReleaseResource(this->shaderBuffer);
+			ReleaseResource(this->shader_buffer);
 			return false;
 		}
 
 		// Create ShaderBuffer from compiled Effect
-		if (FAILED(D3DX11CreateEffectFromMemory(this->shaderBuffer->GetBufferPointer(), this->shaderBuffer->GetBufferSize(), 0, this->device, &this->effect)) || !this->effect)
+		if (FAILED(D3DX11CreateEffectFromMemory(this->shader_buffer->GetBufferPointer(), this->shader_buffer->GetBufferSize(), 0, this->device, &this->effect)) || !this->effect)
 		{
 			ReleaseResource(this->effect);
 			return false;
 		}
 
 		D3DX11_PASS_DESC passDesc;
-		this->effectTechnique = this->effect->GetTechniqueByName("SpriteTech");
-		this->effectShaderResourceVariable = this->effect->GetVariableByName("SpriteTex")->AsShaderResource();
-		this->effectTechnique->GetPassByIndex(0)->GetDesc(&passDesc);
+		this->effect_technique = this->effect->GetTechniqueByName("SpriteTech");
+		this->effect_shader_resource_variable = this->effect->GetVariableByName("SpriteTex")->AsShaderResource();
+		this->effect_technique->GetPassByIndex(0)->GetDesc(&passDesc);
 
 		// Create InputLayout
-		if (FAILED(this->device->CreateInputLayout(layout, ARRAYSIZE(layout), passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, &this->inputLayout)) || !this->inputLayout)
+		if (FAILED(this->device->CreateInputLayout(layout, ARRAYSIZE(layout), passDesc.pIAInputSignature, passDesc.IAInputSignatureSize, &this->input_layout)) || !this->input_layout)
 		{
-			ReleaseResource(this->inputLayout);
+			ReleaseResource(this->input_layout);
 			return false;
 		}
 
@@ -353,9 +353,9 @@ namespace gameoverlay
 		D3D11_SUBRESOURCE_DATA iinitData;
 		iinitData.pSysMem = indices;
 
-		if (FAILED(this->device->CreateBuffer(&indexBufferDesc, &iinitData, &this->indexBuffer)) || !this->indexBuffer)
+		if (FAILED(this->device->CreateBuffer(&indexBufferDesc, &iinitData, &this->index_buffer)) || !this->index_buffer)
 		{
-			ReleaseResource(this->indexBuffer);
+			ReleaseResource(this->index_buffer);
 			return false;
 		}
 
@@ -367,9 +367,9 @@ namespace gameoverlay
 		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-		if (FAILED(this->device->CreateBuffer(&vertexBufferDesc, NULL, &this->vertexBuffer)) || !this->vertexBuffer)
+		if (FAILED(this->device->CreateBuffer(&vertexBufferDesc, NULL, &this->vertex_buffer)) || !this->vertex_buffer)
 		{
-			ReleaseResource(this->vertexBuffer);
+			ReleaseResource(this->vertex_buffer);
 			return false;
 		}
 
@@ -384,9 +384,9 @@ namespace gameoverlay
 		blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-		if (FAILED(this->device->CreateBlendState(&blendDesc, &this->blendState)) || !this->blendState)
+		if (FAILED(this->device->CreateBlendState(&blendDesc, &this->blend_state)) || !this->blend_state)
 		{
-			ReleaseResource(this->blendState);
+			ReleaseResource(this->blend_state);
 			return false;
 		}
 
@@ -407,9 +407,9 @@ namespace gameoverlay
 		depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 		depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-		if (FAILED(this->device->CreateDepthStencilState(&depthStencilDesc, &this->depthStencilState)) || !this->depthStencilState)
+		if (FAILED(this->device->CreateDepthStencilState(&depthStencilDesc, &this->depth_stencil_state)) || !this->depth_stencil_state)
 		{
-			ReleaseResource(this->depthStencilState);
+			ReleaseResource(this->depth_stencil_state);
 			return false;
 		}
 
@@ -422,7 +422,7 @@ namespace gameoverlay
 
 		if (this->buffer)
 		{
-			this->allocator.free(buffer);
+			delete[] buffer;
 			this->buffer = nullptr;
 		}
 
@@ -438,7 +438,7 @@ namespace gameoverlay
 		D3D11_MAPPED_SUBRESOURCE mappedData;
 
 		// Calculate VertexBuffer
-		if (!this->vertexBuffer || FAILED(this->context->Map(this->vertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData))) return false;
+		if (!this->vertex_buffer || FAILED(this->context->Map(this->vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData))) return false;
 
 		this->context->RSGetViewports(&numViewports, &viewport);
 		canvas_d3d11::Vertex* v = reinterpret_cast<canvas_d3d11::Vertex*>(mappedData.pData);
@@ -448,7 +448,7 @@ namespace gameoverlay
 		v[2] = canvas_d3d11::Vertex((2.0f * (float)(x + _width) / viewport.Width - 1.0f), (1.0f - 2.0f * (float)(y + _height) / viewport.Height), 0.5f, 1.0f, 1.0f, color); // Vertex 3
 		v[3] = canvas_d3d11::Vertex((2.0f * (float)x / viewport.Width - 1.0f), (1.0f - 2.0f * (float)(y + _height) / viewport.Height), 0.5f, 0.0f, 1.0f, color); // Vertex 4
 
-		this->context->Unmap(this->vertexBuffer, 0);
+		this->context->Unmap(this->vertex_buffer, 0);
 
 		return true;
 	}
@@ -477,14 +477,14 @@ namespace gameoverlay
 		this->translateVertices(x, y, _width, _height, color);
 
 		const float blendFactor[4] = { 0.f, 0.f, 0.f, 0.f };
-		this->context->OMSetBlendState(this->blendState, blendFactor, 0xffffffff);
-		this->context->OMSetDepthStencilState(this->depthStencilState, 1);
+		this->context->OMSetBlendState(this->blend_state, blendFactor, 0xffffffff);
+		this->context->OMSetDepthStencilState(this->depth_stencil_state, 1);
 		this->context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		this->effectShaderResourceVariable->SetResource(this->shaderResourceView);
-		this->effectTechnique->GetPassByIndex(0)->Apply(0, this->context);
-		this->context->IASetIndexBuffer(this->indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-		this->context->IASetVertexBuffers(0, 1, &this->vertexBuffer, &stride, &offset);
-		this->context->IASetInputLayout(this->inputLayout);
+		this->effect_shader_resource_variable->SetResource(this->shader_resource_view);
+		this->effect_technique->GetPassByIndex(0)->Apply(0, this->context);
+		this->context->IASetIndexBuffer(this->index_buffer, DXGI_FORMAT_R32_UINT, 0);
+		this->context->IASetVertexBuffers(0, 1, &this->vertex_buffer, &stride, &offset);
+		this->context->IASetInputLayout(this->input_layout);
 		this->context->DrawIndexed(6, 0, 0);
 	}
 
@@ -497,7 +497,7 @@ namespace gameoverlay
 	bool canvas_d3d11::isLoaded()
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
-		return (this->texture && this->shaderResourceView);
+		return (this->texture && this->shader_resource_view);
 	}
 
 	ID3D11Texture2D* canvas_d3d11::getTexture()

@@ -52,16 +52,16 @@ namespace gameoverlay
 		ID3D11DeviceContext*                 context;
 		ID3D11Device*                        device;
 		ID3D11Texture2D*                     texture;
-		ID3D11ShaderResourceView*            shaderResourceView;
-		ID3D11Buffer*                        indexBuffer;
-		ID3D11Buffer*                        vertexBuffer;
-		ID3D10Blob*                          shaderBuffer;
-		ID3D11InputLayout*                   inputLayout;
-		ID3D11DepthStencilState*             depthStencilState;
-		ID3D11BlendState*                    blendState;
+		ID3D11ShaderResourceView*            shader_resource_view;
+		ID3D11Buffer*                        index_buffer;
+		ID3D11Buffer*                        vertex_buffer;
+		ID3D10Blob*                          shader_buffer;
+		ID3D11InputLayout*                   input_layout;
+		ID3D11DepthStencilState*             depth_stencil_state;
+		ID3D11BlendState*                    blend_state;
 		ID3DX11Effect*                       effect;
-		ID3DX11EffectTechnique*              effectTechnique;
-		ID3DX11EffectShaderResourceVariable* effectShaderResourceVariable;
+		ID3DX11EffectTechnique*              effect_technique;
+		ID3DX11EffectShaderResourceVariable* effect_shader_resource_variable;
 
 		void resetResources();
 		bool createResources();
@@ -72,8 +72,6 @@ namespace gameoverlay
 		bool performUpdate(const void* buffer);
 
 	public:
-		Utils::Memory::Allocator allocator;
-
 		uint32_t width;
 		uint32_t height;
 
