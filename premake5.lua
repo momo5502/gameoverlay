@@ -18,7 +18,6 @@ workspace "gameoverlay"
 	
 	project "*"
 		includedirs {
-			"interfaces/include",
 			"deps/literally/include"
 		}
 		
@@ -28,6 +27,7 @@ workspace "gameoverlay"
 	
 	require "components/test/project"
 	require "components/overlay/project"
+	require "components/generic/project"
 	
 	group "Renderers"
 		require "components/renderers/dxgi/project"

@@ -7,8 +7,6 @@
 #include <d3d11.h>
 #pragma comment(lib, "d3d11.lib")
 
-#include <MinHook.h>
-
 #include "dxgi_hook.hpp"
 
 namespace gameoverlay
@@ -17,10 +15,8 @@ namespace gameoverlay
 
 	HRESULT WINAPI dxgi_hook::present(void* swap_chain, UINT sync_interval, UINT flags)
 	{
-		if(!this->original_present) return E_FAIL;
-
 		if (this->callback) this->callback(swap_chain);
-		return this->original_present(swap_chain, sync_interval, flags);
+		return this->present_hook.invoke_pascal<HRESULT>(swap_chain, sync_interval, flags);
 	}
 
 	HRESULT WINAPI dxgi_hook::present_stub(void* swap_chain, UINT sync_interval, UINT flags)
@@ -61,9 +57,7 @@ namespace gameoverlay
 		if (FAILED(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_NULL, NULL, 0, &featureLevel, 1, D3D11_SDK_VERSION, &swap_chain_desc, &swap_chain, NULL, NULL, NULL))
 			|| !swap_chain) return;
 
-		this->present_hook = swap_chain->lpVtbl->Present;
-		MH_CreateHook(this->present_hook, dxgi_hook::present_stub, reinterpret_cast<void**>(&this->original_present));
-		MH_EnableHook(this->present_hook);
+		this->present_hook.create(swap_chain->lpVtbl->Present, dxgi_hook::present_stub);
 
 		IDXGISwapChain_Release(swap_chain);
 
@@ -73,7 +67,6 @@ namespace gameoverlay
 
 	dxgi_hook::~dxgi_hook()
 	{
-		MH_RemoveHook(this->present_hook);
 		dxgi_hook::instance = nullptr;
 	}
 }

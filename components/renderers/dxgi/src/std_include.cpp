@@ -5,3 +5,8 @@
 #define LITERALLY_IMPLEMENTATION
 #include <literally/library.hpp>
 #include <literally/io.hpp>
+
+BOOL APIENTRY DllMain(HMODULE /*module*/, DWORD /*callReason*/, LPVOID /*reserved*/)
+{
+	return TRUE;
+}

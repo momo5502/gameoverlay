@@ -1,5 +1,7 @@
 #pragma once
 
+#include <hook.hpp>
+
 namespace gameoverlay
 {
 	class renderer;
@@ -15,9 +17,7 @@ namespace gameoverlay
 		static dxgi_hook* instance;
 		std::function<void(void*)> callback;
 
-		typedef HRESULT(WINAPI* present_t)(void*, UINT, UINT);
-		present_t original_present;
-		void* present_hook;
+		utils::hook present_hook;
 
 		HRESULT WINAPI present(void* swap_chain, UINT sync_interval, UINT flags);
 		static HRESULT WINAPI present_stub(void* swap_chain, UINT sync_interval, UINT flags);
