@@ -69,6 +69,11 @@ namespace gameoverlay
 		uint32_t new_width = uint32_t(viewport.Width);
 		uint32_t new_height = uint32_t(viewport.Height);
 
+		if (this->d3d10_canvas.get_device() != device)
+		{
+			this->d3d10_canvas.release_resources();
+		}
+
 		if (!this->d3d10_canvas.is_initialized())
 		{
 			this->d3d10_canvas.initialize(device);
@@ -100,6 +105,11 @@ namespace gameoverlay
 
 		uint32_t new_width = uint32_t(viewport.Width);
 		uint32_t new_height = uint32_t(viewport.Height);
+
+		if (this->d3d11_canvas.get_device() != device)
+		{
+			this->d3d11_canvas.release_resources();
+		}
 
 		if (!this->d3d11_canvas.is_initialized())
 		{

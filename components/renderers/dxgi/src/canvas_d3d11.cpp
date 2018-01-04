@@ -19,6 +19,11 @@ namespace gameoverlay
 		this->release_resources();
 	}
 
+	ID3D11Device* canvas_d3d11::get_device()
+	{
+		return this->device;
+	}
+
 	void canvas_d3d11::release_resources()
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
@@ -69,7 +74,7 @@ namespace gameoverlay
 
 		// Create ShaderResourceView from file
 		std::wstring wide_file(file.begin(), file.end());
-		if (FAILED(DirectX::CreateWICTextureFromFile(this->device, wide_file.data(), NULL, &this->shader_resource_view)) || !this->shader_resource_view)
+		if (FAILED(DirectX::CreateWICTextureFromFile(this->device, wide_file.data(), nullptr, &this->shader_resource_view)) || !this->shader_resource_view)
 		{
 			release_resource(this->shader_resource_view);
 			return false;
@@ -112,7 +117,7 @@ namespace gameoverlay
 		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 		desc.MiscFlags = 0;
 
-		if (FAILED(this->device->CreateTexture2D(&desc, NULL, &this->texture)) || !this->texture)
+		if (FAILED(this->device->CreateTexture2D(&desc, nullptr, &this->texture)) || !this->texture)
 		{
 			release_resource(this->texture);
 			return false;
@@ -367,7 +372,7 @@ namespace gameoverlay
 		vertex_buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		vertex_buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-		if (FAILED(this->device->CreateBuffer(&vertex_buffer_desc, NULL, &this->vertex_buffer)) || !this->vertex_buffer)
+		if (FAILED(this->device->CreateBuffer(&vertex_buffer_desc, nullptr, &this->vertex_buffer)) || !this->vertex_buffer)
 		{
 			release_resource(this->vertex_buffer);
 			return false;

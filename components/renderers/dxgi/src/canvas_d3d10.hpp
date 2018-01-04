@@ -83,6 +83,8 @@ namespace gameoverlay
 		canvas_d3d10(ID3D10Device* device);
 		~canvas_d3d10();
 
+		ID3D10Device* get_device();
+
 		bool create(std::string file);
 		bool create(uint32_t width, uint32_t height, DXGI_FORMAT format, const void* buffer = NULL);
 
