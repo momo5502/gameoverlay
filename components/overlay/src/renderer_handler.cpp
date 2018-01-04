@@ -82,5 +82,17 @@ namespace gameoverlay
 
 	renderer_handler::~renderer_handler()
 	{
+		for (auto& renderer : this->renderers)
+		{
+			renderer->iface->unregister_frame_callback();
+		}
+
+		this->renderers.clear();
+
+		if (this->main_renderer)
+		{
+			this->main_renderer->iface->unregister_frame_callback();
+			this->main_renderer = {};
+		}
 	}
 }

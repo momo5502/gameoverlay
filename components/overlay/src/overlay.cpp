@@ -17,6 +17,8 @@ namespace gameoverlay
 		{
 			overlay::handler->get_renderer()->iface->register_frame_callback([]()
 			{
+				if (!overlay::handler) return;
+
 				auto renderer = overlay::handler->get_renderer();
 				auto canvas = renderer->iface->get_canvas();
 				if (canvas && canvas->is_available())

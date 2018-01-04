@@ -1,12 +1,3 @@
-
-
--- Option to allow copying the DLL file to a custom folder after build
-newoption {
-	trigger = "copy-to",
-	description = "Optional, copy the DLL to a custom folder after build, define the path here if wanted.",
-	value = "PATH"
-}
-
 require "deps/premake/fx11"
 require "deps/premake/directxtk"
 require "deps/premake/minhook"
@@ -31,6 +22,7 @@ workspace "gameoverlay"
 	
 	group "Renderers"
 		require "components/renderers/dxgi/project"
+		require "components/renderers/d3d9/project"
 		
 	group "Dependencies"
 		fx11.project()
