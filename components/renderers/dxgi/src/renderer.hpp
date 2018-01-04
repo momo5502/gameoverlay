@@ -3,7 +3,7 @@
 #include <irenderer.hpp>
 #include "dxgi_hook.hpp"
 
-#include "canvas_d3d11.hpp"
+#include "canvas.hpp"
 
 namespace gameoverlay
 {
@@ -25,7 +25,8 @@ namespace gameoverlay
 
 	private:
 		dxgi_hook hook;
-		canvas_d3d11 d3d11_canvas;
+		canvas canvas_wapper;
+		void* swap_chain;
 
 		bool presented = false;
 		std::function<void()> callback;

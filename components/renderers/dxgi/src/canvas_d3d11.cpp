@@ -146,16 +146,6 @@ namespace gameoverlay
 		return this->perform_update(_buffer);
 	}
 
-	uint32_t canvas_d3d11::get_width()
-	{
-		return this->width;
-	}
-
-	uint32_t canvas_d3d11::get_height()
-	{
-		return this->height;
-	}
-
 	bool canvas_d3d11::resize(uint32_t _width, uint32_t _height)
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);

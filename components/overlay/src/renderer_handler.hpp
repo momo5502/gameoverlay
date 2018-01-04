@@ -21,9 +21,19 @@ namespace gameoverlay
 	class renderer_handler
 	{
 	public:
-		static void load_renderers();
-		static void unload_renderers();
+		renderer_handler();
+		~renderer_handler();
 
-		static std::vector<std::shared_ptr<renderer>> renderers;
+		void on_renderer_available(std::function<void()> callback);
+
+		std::shared_ptr<renderer> get_renderer();
+
+	private:
+		std::function<void()> available_callback;
+
+		std::shared_ptr<renderer> main_renderer;
+		std::vector<std::shared_ptr<renderer>> renderers;
+
+		void set_main_renderer(renderer* available_renderer);
 	};
 }

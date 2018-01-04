@@ -8,14 +8,12 @@
 #include <d3dx11Effect.h>
 #include <WICTextureLoader.h>
 
-#include <icanvas.hpp>
-
 #define reset_resource(resource) resource = NULL
 #define release_resource(resource) if(resource) { resource->Release(); reset_resource(resource); }
 
 namespace gameoverlay
 {
-	class canvas_d3d11 : public icanvas
+	class canvas_d3d11
 	{
 		class context_store
 		{
@@ -85,11 +83,6 @@ namespace gameoverlay
 		canvas_d3d11();
 		canvas_d3d11(ID3D11Device* device);
 		~canvas_d3d11();
-
-		virtual uint32_t get_width() override;
-		virtual uint32_t get_height() override;
-		virtual bool paint(const void* _buffer) override { return this->update(_buffer); }
-		virtual bool is_available() override { return this->is_initialized(); }
 
 		bool create(std::string file);
 		bool create(uint32_t width, uint32_t height, DXGI_FORMAT format, const void* buffer = NULL);
