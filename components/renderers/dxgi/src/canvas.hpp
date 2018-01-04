@@ -1,6 +1,7 @@
 #pragma once
 
 #include "icanvas.hpp"
+#include "canvas_d3d10.hpp"
 #include "canvas_d3d11.hpp"
 
 namespace gameoverlay
@@ -20,6 +21,7 @@ namespace gameoverlay
 		void draw(IDXGISwapChain* swap_chain);
 
 	private:
+		canvas_d3d10 d3d10_canvas;
 		canvas_d3d11 d3d11_canvas;
 
 		bool is_d3d10_available();

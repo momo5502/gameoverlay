@@ -10,6 +10,7 @@ newoption {
 require "deps/premake/fx11"
 require "deps/premake/directxtk"
 require "deps/premake/minhook"
+require "deps/premake/dxsdk"
 
 workspace "gameoverlay"
 	configurations { "Debug", "Release" }

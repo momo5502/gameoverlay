@@ -15,4 +15,4 @@
 	url = https://github.com/nigels-com/glew
 [submodule "deps/dxsdk"]
 	path = deps/dxsdk
-	url = https://github.com/apitrace/dxsdk
+	url = https://github.com/devKlausS/dxsdk.git

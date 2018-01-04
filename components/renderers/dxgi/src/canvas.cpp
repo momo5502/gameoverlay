@@ -15,14 +15,14 @@ namespace gameoverlay
 
 	uint32_t canvas::get_width()
 	{
-		if (this->is_d3d10_available()) {}
+		if (this->is_d3d10_available()) return this->d3d10_canvas.width;
 		if (this->is_d3d11_available()) return this->d3d11_canvas.width;
 		return 0;
 	}
 
 	uint32_t canvas::get_height()
 	{
-		if (this->is_d3d10_available()) {}
+		if (this->is_d3d10_available()) return this->d3d10_canvas.height;
 		if (this->is_d3d11_available()) return this->d3d11_canvas.height;
 		return 0;
 	}
@@ -30,7 +30,7 @@ namespace gameoverlay
 	bool canvas::paint(const void* buffer)
 	{
 		// TODO: Do channel swapping here
-		if(this->is_d3d10_available()) {}
+		if (this->is_d3d10_available()) return this->d3d10_canvas.update(buffer);
 		if (this->is_d3d11_available()) return this->d3d11_canvas.update(buffer);
 		return false;
 	}
@@ -50,7 +50,7 @@ namespace gameoverlay
 
 	bool canvas::is_d3d10_available()
 	{
-		return false;
+		return this->d3d10_canvas.is_loaded();
 	}
 
 	bool canvas::is_d3d11_available()
@@ -61,6 +61,29 @@ namespace gameoverlay
 	void canvas::draw_d3d10(ID3D10Device* device)
 	{
 		if (!device) return;
+
+		UINT num = 1;
+		D3D10_VIEWPORT viewport;
+		device->RSGetViewports(&num, &viewport);
+
+		uint32_t new_width = uint32_t(viewport.Width);
+		uint32_t new_height = uint32_t(viewport.Height);
+
+		if (!this->d3d10_canvas.is_initialized())
+		{
+			this->d3d10_canvas.initialize(device);
+			this->d3d10_canvas.create(new_width, new_height, DXGI_FORMAT_R8G8B8A8_UNORM);
+		}
+
+		if (this->d3d10_canvas.is_initialized())
+		{
+			if (this->d3d10_canvas.width != new_width || this->d3d10_canvas.height != new_height)
+			{
+				this->d3d10_canvas.resize(new_width, new_height);
+			}
+		}
+
+		this->d3d10_canvas.draw(0, 0);
 	}
 
 	void canvas::draw_d3d11(ID3D11Device* device)
@@ -88,7 +111,7 @@ namespace gameoverlay
 		{
 			if (this->d3d11_canvas.width != new_width || this->d3d11_canvas.height != new_height)
 			{
-				d3d11_canvas.resize(new_width, new_height);
+				this->d3d11_canvas.resize(new_width, new_height);
 			}
 		}
 
