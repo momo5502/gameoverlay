@@ -5,7 +5,7 @@ namespace gameoverlay
 {
 	renderer::renderer() : swap_chain(nullptr)
 	{
-		this->hook_dxgi.on_frame(std::bind(&renderer::frame_callback, this, std::placeholders::_1));
+		this->dxgi_hook.on_frame(std::bind(&renderer::frame_callback, this, std::placeholders::_1));
 	}
 
 	renderer::~renderer()
@@ -32,8 +32,8 @@ namespace gameoverlay
 
 	icanvas* renderer::get_canvas()
 	{
-		if (!this->dxgi_canvas.is_available()) return nullptr;
-		return &this->dxgi_canvas;
+		if (!this->canvas.is_available()) return nullptr;
+		return &this->canvas;
 	}
 
 	void renderer::register_frame_callback(std::function<void()> _callback)
@@ -53,7 +53,7 @@ namespace gameoverlay
 		if (this->callback) this->callback();
 
 		IDXGISwapChain* dxgi_swap_chain = reinterpret_cast<IDXGISwapChain*>(this->swap_chain);
-		this->dxgi_canvas.draw(dxgi_swap_chain);
+		this->canvas.draw(dxgi_swap_chain);
 	}
 
 	extern "C" __declspec(dllexport) renderer* create_interface()

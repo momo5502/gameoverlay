@@ -1,9 +1,9 @@
 #pragma once
 
 #include <irenderer.hpp>
-#include "dxgi_hook.hpp"
+#include "hook_dxgi.hpp"
 
-#include "canvas_dxgi.hpp"
+#include "canvas.hpp"
 
 namespace gameoverlay
 {
@@ -24,8 +24,8 @@ namespace gameoverlay
 		void frame_callback(void* swap_chain);
 
 	private:
-		dxgi_hook hook_dxgi;
-		canvas_dxgi dxgi_canvas;
+		hook_dxgi dxgi_hook;
+		canvas canvas;
 		void* swap_chain;
 
 		bool presented = false;

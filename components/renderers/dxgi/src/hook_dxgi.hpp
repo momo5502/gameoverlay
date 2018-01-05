@@ -5,16 +5,16 @@
 namespace gameoverlay
 {
 	class renderer;
-	class dxgi_hook
+	class hook_dxgi
 	{
 	public:
-		dxgi_hook();
-		~dxgi_hook();
+		hook_dxgi();
+		~hook_dxgi();
 
 		void on_frame(std::function<void(void*)> callback);
 
 	private:
-		static dxgi_hook* instance;
+		static hook_dxgi* instance;
 		std::function<void(void*)> callback;
 
 		utils::hook present_hook;

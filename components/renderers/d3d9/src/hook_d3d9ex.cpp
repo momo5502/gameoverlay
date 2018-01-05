@@ -28,31 +28,31 @@ struct iface##Vtbl
 
 #define CINTERFACE
 #include <d3d9.h>
-#include "d3d9ex_hook.hpp"
+#include "hook_d3d9ex.hpp"
 #pragma comment(lib, "d3d9.lib")
 
 namespace gameoverlay
 {
-	d3d9ex_hook* d3d9ex_hook::instance = nullptr;
+	hook_d3d9ex* hook_d3d9ex::instance = nullptr;
 
-	void d3d9ex_hook::frame_handler(void* device)
+	void hook_d3d9ex::frame_handler(void* device)
 	{
 		if (!device) return;
 		if (this->callback) this->callback(device);
 	}
 
-	HRESULT WINAPI d3d9ex_hook::reset(void* device, void* presentation_parameters)
+	HRESULT WINAPI hook_d3d9ex::reset(void* device, void* presentation_parameters)
 	{
 		return this->reset_hook.invoke_pascal<HRESULT>(device, presentation_parameters);
 	}
 
-	HRESULT WINAPI d3d9ex_hook::reset_stub(void* device, void* presentation_parameters)
+	HRESULT WINAPI hook_d3d9ex::reset_stub(void* device, void* presentation_parameters)
 	{
-		if (!d3d9ex_hook::instance) return E_FAIL;
-		return d3d9ex_hook::instance->reset(device, presentation_parameters);
+		if (!hook_d3d9ex::instance) return E_FAIL;
+		return hook_d3d9ex::instance->reset(device, presentation_parameters);
 	}
 
-	HRESULT WINAPI d3d9ex_hook::swap_chain_present(void* swap_chain, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region, DWORD flags)
+	HRESULT WINAPI hook_d3d9ex::swap_chain_present(void* swap_chain, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region, DWORD flags)
 	{
 		this->present_hook.remove();
 		this->presentex_hook.remove();
@@ -66,13 +66,13 @@ namespace gameoverlay
 		return this->swap_chain_present_hook.invoke_pascal<HRESULT>(swap_chain, source_rect, dest_rect, dest_window_override, dirty_region, flags);
 	}
 
-	HRESULT WINAPI d3d9ex_hook::swap_chain_present_stub(void* swap_chain, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region, DWORD flags)
+	HRESULT WINAPI hook_d3d9ex::swap_chain_present_stub(void* swap_chain, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region, DWORD flags)
 	{
-		if (!d3d9ex_hook::instance) return E_FAIL;
-		return d3d9ex_hook::instance->swap_chain_present(swap_chain, source_rect, dest_rect, dest_window_override, dirty_region, flags);
+		if (!hook_d3d9ex::instance) return E_FAIL;
+		return hook_d3d9ex::instance->swap_chain_present(swap_chain, source_rect, dest_rect, dest_window_override, dirty_region, flags);
 	}
 
-	HRESULT WINAPI d3d9ex_hook::present(void* device, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region)
+	HRESULT WINAPI hook_d3d9ex::present(void* device, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region)
 	{
 		this->presentex_hook.remove();
 		this->swap_chain_present_hook.remove();
@@ -82,13 +82,13 @@ namespace gameoverlay
 		return this->present_hook.invoke_pascal<HRESULT>(device, source_rect, dest_rect, dest_window_override, dirty_region);
 	}
 
-	HRESULT WINAPI d3d9ex_hook::present_stub(void* device, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region)
+	HRESULT WINAPI hook_d3d9ex::present_stub(void* device, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region)
 	{
-		if (!d3d9ex_hook::instance) return E_FAIL;
-		return d3d9ex_hook::instance->present(device, source_rect, dest_rect, dest_window_override, dirty_region);
+		if (!hook_d3d9ex::instance) return E_FAIL;
+		return hook_d3d9ex::instance->present(device, source_rect, dest_rect, dest_window_override, dirty_region);
 	}
 
-	HRESULT WINAPI d3d9ex_hook::presentex(void* device, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region, DWORD flags)
+	HRESULT WINAPI hook_d3d9ex::presentex(void* device, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region, DWORD flags)
 	{
 		this->present_hook.remove();
 		this->swap_chain_present_hook.remove();
@@ -98,43 +98,43 @@ namespace gameoverlay
 		return this->presentex_hook.invoke_pascal<HRESULT>(device, source_rect, dest_rect, dest_window_override, dirty_region, flags);
 	}
 
-	HRESULT WINAPI d3d9ex_hook::presentex_stub(void* device, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region, DWORD flags)
+	HRESULT WINAPI hook_d3d9ex::presentex_stub(void* device, CONST RECT* source_rect, CONST RECT* dest_rect, HWND dest_window_override, CONST RGNDATA* dirty_region, DWORD flags)
 	{
-		if (!d3d9ex_hook::instance) return E_FAIL;
-		return d3d9ex_hook::instance->presentex(device, source_rect, dest_rect, dest_window_override, dirty_region, flags);
+		if (!hook_d3d9ex::instance) return E_FAIL;
+		return hook_d3d9ex::instance->presentex(device, source_rect, dest_rect, dest_window_override, dirty_region, flags);
 	}
 
-	HRESULT WINAPI d3d9ex_hook::endscene(void* device)
+	HRESULT WINAPI hook_d3d9ex::endscene(void* device)
 	{
 		IDirect3DDevice9Ex* device9 = reinterpret_cast<IDirect3DDevice9Ex*>(device);
 
 		this->endscene_hook.remove();
-		this->reset_hook.create(device9->lpVtbl->Reset, d3d9ex_hook::reset_stub);
-		this->present_hook.create(device9->lpVtbl->Present, d3d9ex_hook::present_stub);
-		this->presentex_hook.create(device9->lpVtbl->PresentEx, d3d9ex_hook::presentex_stub);
+		this->reset_hook.create(device9->lpVtbl->Reset, hook_d3d9ex::reset_stub);
+		this->present_hook.create(device9->lpVtbl->Present, hook_d3d9ex::present_stub);
+		this->presentex_hook.create(device9->lpVtbl->PresentEx, hook_d3d9ex::presentex_stub);
 
 		IDirect3DSwapChain9* swap_chain;
 		IDirect3DDevice9Ex_GetSwapChain(device9, 0, &swap_chain);
 		if (swap_chain)
 		{
-			this->swap_chain_present_hook.create(swap_chain->lpVtbl->Present, d3d9ex_hook::swap_chain_present_stub);
+			this->swap_chain_present_hook.create(swap_chain->lpVtbl->Present, hook_d3d9ex::swap_chain_present_stub);
 		}
 
 		return IDirect3DDevice9Ex_EndScene(device9);
 	}
 
-	HRESULT WINAPI d3d9ex_hook::endscene_stub(void* device)
+	HRESULT WINAPI hook_d3d9ex::endscene_stub(void* device)
 	{
-		if(!d3d9ex_hook::instance) return E_FAIL;
-		return d3d9ex_hook::instance->endscene(device);
+		if(!hook_d3d9ex::instance) return E_FAIL;
+		return hook_d3d9ex::instance->endscene(device);
 	}
 
-	void d3d9ex_hook::on_frame(std::function<void(void*)> _callback)
+	void hook_d3d9ex::on_frame(std::function<void(void*)> _callback)
 	{
 		this->callback = _callback;
 	}
 
-	void d3d9ex_hook::unhook()
+	void hook_d3d9ex::unhook()
 	{
 		this->endscene_hook.remove();
 		this->reset_hook.remove();
@@ -143,9 +143,9 @@ namespace gameoverlay
 		this->swap_chain_present_hook.remove();
 	}
 
-	d3d9ex_hook::d3d9ex_hook()
+	hook_d3d9ex::hook_d3d9ex()
 	{
-		d3d9ex_hook::instance = this;
+		hook_d3d9ex::instance = this;
 
 		IDirect3D9Ex* direct3d;
 		Direct3DCreate9Ex(D3D_SDK_VERSION, &direct3d);
@@ -164,14 +164,14 @@ namespace gameoverlay
 		(&direct3d->lpVtbl->CreateDeviceEx)[1](direct3d, D3DADAPTER_DEFAULT, D3DDEVTYPE_NULLREF, GetDesktopWindow(), D3DCREATE_SOFTWARE_VERTEXPROCESSING | D3DCREATE_MULTITHREADED, &presParams, nullptr, &device);
 		if (!device) { IDirect3D9Ex_Release(direct3d); return; }
 
-		this->endscene_hook.create(device->lpVtbl->EndScene, d3d9ex_hook::endscene_stub);
+		this->endscene_hook.create(device->lpVtbl->EndScene, hook_d3d9ex::endscene_stub);
 
 		IDirect3DDevice9Ex_Release(device);
 		IDirect3D9Ex_Release(direct3d);
 	}
 
-	d3d9ex_hook::~d3d9ex_hook()
+	hook_d3d9ex::~hook_d3d9ex()
 	{
-		d3d9ex_hook::instance = nullptr;
+		hook_d3d9ex::instance = nullptr;
 	}
 }

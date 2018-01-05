@@ -1,33 +1,33 @@
 #include "std_include.hpp"
-#include "canvas_dxgi.hpp"
+#include "canvas.hpp"
 
 namespace gameoverlay
 {
-	canvas_dxgi::~canvas_dxgi()
+	canvas::~canvas()
 	{
 
 	}
 
-	bool canvas_dxgi::is_available()
+	bool canvas::is_available()
 	{
 		return this->is_d3d10_available() || this->is_d3d11_available();
 	}
 
-	uint32_t canvas_dxgi::get_width()
+	uint32_t canvas::get_width()
 	{
 		if (this->is_d3d10_available()) return this->d3d10_canvas.width;
 		if (this->is_d3d11_available()) return this->d3d11_canvas.width;
 		return 0;
 	}
 
-	uint32_t canvas_dxgi::get_height()
+	uint32_t canvas::get_height()
 	{
 		if (this->is_d3d10_available()) return this->d3d10_canvas.height;
 		if (this->is_d3d11_available()) return this->d3d11_canvas.height;
 		return 0;
 	}
 
-	bool canvas_dxgi::paint(const void* buffer)
+	bool canvas::paint(const void* buffer)
 	{
 		// TODO: Do channel swapping here
 		if (this->is_d3d10_available()) return this->d3d10_canvas.update(buffer);
@@ -35,7 +35,7 @@ namespace gameoverlay
 		return false;
 	}
 
-	void canvas_dxgi::draw(IDXGISwapChain* swap_chain)
+	void canvas::draw(IDXGISwapChain* swap_chain)
 	{
 		if (!swap_chain) return;
 
@@ -48,17 +48,17 @@ namespace gameoverlay
 		this->draw_d3d11(device11);
 	}
 
-	bool canvas_dxgi::is_d3d10_available()
+	bool canvas::is_d3d10_available()
 	{
 		return this->d3d10_canvas.is_loaded();
 	}
 
-	bool canvas_dxgi::is_d3d11_available()
+	bool canvas::is_d3d11_available()
 	{
 		return this->d3d11_canvas.is_loaded();
 	}
 
-	void canvas_dxgi::draw_d3d10(ID3D10Device* device)
+	void canvas::draw_d3d10(ID3D10Device* device)
 	{
 		if (!device) return;
 
@@ -91,7 +91,7 @@ namespace gameoverlay
 		this->d3d10_canvas.draw(0, 0);
 	}
 
-	void canvas_dxgi::draw_d3d11(ID3D11Device* device)
+	void canvas::draw_d3d11(ID3D11Device* device)
 	{
 		if (!device) return;
 

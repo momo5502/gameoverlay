@@ -4,17 +4,17 @@
 
 namespace gameoverlay
 {
-	class d3d9_hook
+	class hook_d3d9
 	{
 	public:
-		d3d9_hook();
-		~d3d9_hook();
+		hook_d3d9();
+		~hook_d3d9();
 
 		void on_frame(std::function<void(void*)> callback);
 		void unhook();
 
 	private:
-		static d3d9_hook* instance;
+		static hook_d3d9* instance;
 
 		std::function<void(void*)> callback;
 

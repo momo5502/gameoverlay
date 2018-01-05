@@ -7,32 +7,32 @@
 #include <d3d11.h>
 #pragma comment(lib, "d3d11.lib")
 
-#include "dxgi_hook.hpp"
+#include "hook_dxgi.hpp"
 
 namespace gameoverlay
 {
-	dxgi_hook* dxgi_hook::instance = nullptr;
+	hook_dxgi* hook_dxgi::instance = nullptr;
 
-	HRESULT WINAPI dxgi_hook::present(void* swap_chain, UINT sync_interval, UINT flags)
+	HRESULT WINAPI hook_dxgi::present(void* swap_chain, UINT sync_interval, UINT flags)
 	{
 		if (this->callback) this->callback(swap_chain);
 		return this->present_hook.invoke_pascal<HRESULT>(swap_chain, sync_interval, flags);
 	}
 
-	HRESULT WINAPI dxgi_hook::present_stub(void* swap_chain, UINT sync_interval, UINT flags)
+	HRESULT WINAPI hook_dxgi::present_stub(void* swap_chain, UINT sync_interval, UINT flags)
 	{
-		if (!dxgi_hook::instance) return E_FAIL;
-		return dxgi_hook::instance->present(swap_chain, sync_interval, flags);
+		if (!hook_dxgi::instance) return E_FAIL;
+		return hook_dxgi::instance->present(swap_chain, sync_interval, flags);
 	}
 
-	void dxgi_hook::on_frame(std::function<void(void*)> _callback)
+	void hook_dxgi::on_frame(std::function<void(void*)> _callback)
 	{
 		this->callback = _callback;
 	}
 
-	dxgi_hook::dxgi_hook()
+	hook_dxgi::hook_dxgi()
 	{
-		dxgi_hook::instance = this;
+		hook_dxgi::instance = this;
 
 		IDXGISwapChain* swap_chain = nullptr;
 		DXGI_SWAP_CHAIN_DESC swap_chain_desc;
@@ -49,13 +49,13 @@ namespace gameoverlay
 		if (FAILED(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_NULL, NULL, 0, &featureLevel, 1, D3D11_SDK_VERSION, &swap_chain_desc, &swap_chain, NULL, NULL, NULL))
 			|| !swap_chain) return;
 
-		this->present_hook.create(swap_chain->lpVtbl->Present, dxgi_hook::present_stub);
+		this->present_hook.create(swap_chain->lpVtbl->Present, hook_dxgi::present_stub);
 
 		IDXGISwapChain_Release(swap_chain);
 	}
 
-	dxgi_hook::~dxgi_hook()
+	hook_dxgi::~hook_dxgi()
 	{
-		dxgi_hook::instance = nullptr;
+		hook_dxgi::instance = nullptr;
 	}
 }
