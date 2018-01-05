@@ -1,6 +1,8 @@
 #pragma once
 
 #include <irenderer.hpp>
+#include "d3d9_hook.hpp"
+#include "d3d9ex_hook.hpp"
 
 namespace gameoverlay
 {
@@ -19,5 +21,7 @@ namespace gameoverlay
 		virtual void unregister_frame_callback() override;
 
 	private:
+		d3d9_hook hook_d3d9;
+		d3d9ex_hook hook_d3d9ex;
 	};
 }

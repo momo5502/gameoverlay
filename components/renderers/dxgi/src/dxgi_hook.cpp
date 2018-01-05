@@ -7,7 +7,6 @@
 #include <d3d11.h>
 #pragma comment(lib, "d3d11.lib")
 
-#include <dummy_window.hpp>
 #include "dxgi_hook.hpp"
 
 namespace gameoverlay
@@ -39,10 +38,8 @@ namespace gameoverlay
 		DXGI_SWAP_CHAIN_DESC swap_chain_desc;
 		D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
 
-		utils::dummy_window window;
-
 		ZeroMemory(&swap_chain_desc, sizeof(swap_chain_desc));
-		swap_chain_desc.OutputWindow = window;
+		swap_chain_desc.OutputWindow = GetDesktopWindow();
 		swap_chain_desc.BufferCount = 1;
 		swap_chain_desc.BufferDesc.Width = 1;
 		swap_chain_desc.BufferDesc.Height = 1;

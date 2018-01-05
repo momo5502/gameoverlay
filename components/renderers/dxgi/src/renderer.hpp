@@ -3,7 +3,7 @@
 #include <irenderer.hpp>
 #include "dxgi_hook.hpp"
 
-#include "canvas.hpp"
+#include "canvas_dxgi.hpp"
 
 namespace gameoverlay
 {
@@ -24,8 +24,8 @@ namespace gameoverlay
 		void frame_callback(void* swap_chain);
 
 	private:
-		dxgi_hook hook;
-		canvas canvas_wapper;
+		dxgi_hook hook_dxgi;
+		canvas_dxgi dxgi_canvas;
 		void* swap_chain;
 
 		bool presented = false;

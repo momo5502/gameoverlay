@@ -6,10 +6,10 @@
 
 namespace gameoverlay
 {
-	class canvas : public icanvas
+	class canvas_dxgi : public icanvas
 	{
 	public:
-		virtual ~canvas() override;
+		virtual ~canvas_dxgi() override;
 
 		virtual bool is_available() override;
 
