@@ -86,9 +86,9 @@ namespace gameoverlay
 			{
 				this->d3d10_canvas.resize(new_width, new_height);
 			}
-		}
 
-		this->d3d10_canvas.draw(0, 0);
+			this->d3d10_canvas.draw(0, 0);
+		}
 	}
 
 	void canvas::draw_d3d11(ID3D11Device* device)
@@ -123,8 +123,8 @@ namespace gameoverlay
 			{
 				this->d3d11_canvas.resize(new_width, new_height);
 			}
-		}
 
-		this->d3d11_canvas.draw(0, 0);
+			this->d3d11_canvas.draw(0, 0);
+		}
 	}
 }

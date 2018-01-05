@@ -11,12 +11,14 @@ namespace gameoverlay
 		~hook_d3d9ex();
 
 		void on_frame(std::function<void(void*)> callback);
+		void on_reset(std::function<void(void*)> callback);
 		void unhook();
 
 	private:
 		static hook_d3d9ex* instance;
 
-		std::function<void(void*)> callback;
+		std::function<void(void*)> frame_callback;
+		std::function<void(void*)> reset_callback;
 
 		utils::hook endscene_hook;
 		utils::hook reset_hook;
@@ -25,6 +27,7 @@ namespace gameoverlay
 		utils::hook swap_chain_present_hook;
 
 		void frame_handler(void* device);
+		void reset_handler(void* device);
 
 		HRESULT WINAPI reset(void* device, void* presentation_parameters);
 		static HRESULT WINAPI reset_stub(void* device, void* presentation_parameters);

@@ -18,6 +18,11 @@ namespace gameoverlay
 		this->release_resources();
 	}
 
+	IDirect3DDevice9* canvas_d3d9::get_device()
+	{
+		return this->device;
+	}
+
 	void canvas_d3d9::release_resources()
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
@@ -235,13 +240,13 @@ namespace gameoverlay
 		return true;
 	}
 
-	void canvas_d3d9::draw(int32_t x, int32_t y, COLORREF color)
+	bool canvas_d3d9::draw(int32_t x, int32_t y, COLORREF color)
 	{
-		this->draw(x, y, this->width, this->height, color);
+		return this->draw(x, y, this->width, this->height, color);
 	}
 
 	// Width and height not needed yet
-	void canvas_d3d9::draw(int32_t x, int32_t y, uint32_t /*width*/, uint32_t /*height*/, COLORREF color)
+	bool canvas_d3d9::draw(int32_t x, int32_t y, uint32_t /*width*/, uint32_t /*height*/, COLORREF color)
 	{
 		std::lock_guard<std::recursive_mutex> _(this->mutex);
 
@@ -253,12 +258,19 @@ namespace gameoverlay
 
 		D3DXVECTOR3 position((float)x, (float)y, 0.0f);
 
+		bool result = false;
 		if (this->sprite && this->texture)
 		{
+			this->device->BeginScene();
+
 			this->sprite->Begin(D3DXSPRITE_ALPHABLEND);
-			this->sprite->Draw(this->texture, NULL, NULL, &position, color);
+			result = SUCCEEDED(this->sprite->Draw(this->texture, NULL, NULL, &position, color));
 			this->sprite->End();
+
+			this->device->EndScene();
 		}
+
+		return result;
 	}
 
 	bool canvas_d3d9::is_initialized()

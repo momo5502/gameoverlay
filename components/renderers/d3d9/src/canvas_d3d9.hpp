@@ -39,6 +39,8 @@ namespace gameoverlay
 		canvas_d3d9(IDirect3DDevice9* device);
 		~canvas_d3d9();
 
+		IDirect3DDevice9* get_device();
+
 		bool create(std::string file);
 		bool create(uint32_t width, uint32_t height, D3DFORMAT format, const void* buffer = NULL);
 		
@@ -47,8 +49,8 @@ namespace gameoverlay
 
 		bool resize(uint32_t width, uint32_t height);
 
-		void draw(int32_t x, int32_t y, uint32_t width, uint32_t height, COLORREF color = -1);
-		void draw(int32_t x, int32_t y, COLORREF color = -1);
+		bool draw(int32_t x, int32_t y, uint32_t width, uint32_t height, COLORREF color = -1);
+		bool draw(int32_t x, int32_t y, COLORREF color = -1);
 
 		bool is_initialized();
 		bool is_loaded();

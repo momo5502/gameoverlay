@@ -26,9 +26,9 @@ namespace gameoverlay
 	private:
 		hook_dxgi dxgi_hook;
 		canvas canvas;
+
 		void* swap_chain;
 
-		bool presented = false;
 		std::function<void()> callback;
 	};
 }

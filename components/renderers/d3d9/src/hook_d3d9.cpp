@@ -38,11 +38,18 @@ namespace gameoverlay
 	void hook_d3d9::frame_handler(void* device)
 	{
 		if (!device) return;
-		if (this->callback) this->callback(device);
+		if (this->frame_callback) this->frame_callback(device);
+	}
+
+	void hook_d3d9::reset_handler(void* device)
+	{
+		if (!device) return;
+		if (this->reset_callback) this->reset_callback(device);
 	}
 
 	HRESULT WINAPI hook_d3d9::reset(void* device, void* presentation_parameters)
 	{
+		this->reset_handler(device);
 		return this->reset_hook.invoke_pascal<HRESULT>(device, presentation_parameters);
 	}
 
@@ -110,9 +117,14 @@ namespace gameoverlay
 		return hook_d3d9::instance->endscene(device);
 	}
 
-	void hook_d3d9::on_frame(std::function<void(void*)> _callback)
+	void hook_d3d9::on_frame(std::function<void(void*)> callback)
 	{
-		this->callback = _callback;
+		this->frame_callback = callback;
+	}
+
+	void hook_d3d9::on_reset(std::function<void(void*)> callback)
+	{
+		this->reset_callback = callback;
 	}
 
 	void hook_d3d9::unhook()
