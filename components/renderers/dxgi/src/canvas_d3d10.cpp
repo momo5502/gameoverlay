@@ -424,7 +424,7 @@ namespace gameoverlay
 
 		if (this->buffer)
 		{
-			delete[] buffer;
+			delete[] this->buffer;
 			this->buffer = nullptr;
 		}
 

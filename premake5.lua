@@ -24,6 +24,10 @@ workspace "gameoverlay"
 		require "components/renderers/dxgi/project"
 		require "components/renderers/d3d9/project"
 		
+		-- Import the directxsdk only for the d3d9 renderer
+		project "renderer_d3d9"
+			dxsdk.import()
+		
 	group "Dependencies"
 		fx11.project()
 		directxtk.project()
