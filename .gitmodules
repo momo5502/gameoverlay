@@ -1,6 +1,6 @@
 [submodule "deps/literally"]
 	path = deps/literally
-	url = https://github.com/momo5502/literally.git
+	url = ../literally.git
 [submodule "deps/minhook"]
 	path = deps/minhook
 	url = https://github.com/TsudaKageyu/minhook
