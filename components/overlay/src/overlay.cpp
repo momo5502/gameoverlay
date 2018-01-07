@@ -32,7 +32,7 @@ namespace gameoverlay
 						auto ptr = test_buffer.get();
 						for (size_t i = 0; i < test_size; ++i)
 						{
-							ptr[i] = static_cast<unsigned char>(rand());
+							ptr[i] = static_cast<unsigned char>(i);
 						}
 
 						canvas->paint(ptr);

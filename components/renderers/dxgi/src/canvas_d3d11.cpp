@@ -253,6 +253,7 @@ namespace gameoverlay
 
 		this->device = _device;
 		this->device->GetImmediateContext(&this->context);
+		//this->device->CreateDeferredContext(0, &this->context);
 
 		return this->create_resources();
 	}

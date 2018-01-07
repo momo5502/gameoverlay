@@ -9,7 +9,9 @@
 
 		postbuildcommands {
 			"if not exist \"%{wks.location}runtime\" mkdir \"%{wks.location}runtime\"",
-			"copy /y \"$(TargetPath)\" \"%{wks.location}runtime\"",
+			"if not exist \"%{wks.location}runtime\\%{cfg.platform}\" mkdir \"%{wks.location}runtime\\%{cfg.platform}\"",
+			"if not exist \"%{wks.location}runtime\\%{cfg.platform}\\%{cfg.buildcfg}\" mkdir \"%{wks.location}runtime\\%{cfg.platform}\\%{cfg.buildcfg}\"",
+			"copy /y \"$(TargetPath)\" \"%{wks.location}runtime\\%{cfg.platform}\\%{cfg.buildcfg}\"",
 		}
 
 		pchheader "std_include.hpp"
