@@ -11,10 +11,11 @@ namespace gameoverlay
 		~hook();
 
 		void on_frame(std::function<void(HDC)> callback);
-		void unhook();
 
 	private:
 		static hook* instance;
+
+		std::optional<bool> glew_initialized;
 
 		utils::hook swapBuffers_hook;
 
@@ -22,6 +23,7 @@ namespace gameoverlay
 
 		void frame_handler(HDC hdc);
 
-		static BOOL WINAPI swapBuffers_stub(HDC hdc);
+		BOOL WINAPI swap_buffers(HDC hdc);
+		static BOOL WINAPI swap_buffers_stub(HDC hdc);
 	};
 }

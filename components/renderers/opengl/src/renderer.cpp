@@ -21,7 +21,7 @@ namespace gameoverlay
 	HWND renderer::get_window()
 	{
 		if (!this->hdc) return nullptr;
-		return nullptr;
+		return WindowFromDC(this->hdc);
 	}
 
 	icanvas* renderer::get_canvas()

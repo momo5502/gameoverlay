@@ -60,7 +60,7 @@ namespace gameoverlay
 				this->d3d9_canvas.resize(new_width, new_height);
 			}
 
-			// TODO: Creating a new device won't properly release the ressources, as the pointer doesn't change :/
+			// TODO: Creating a new device won't properly release the resources, as the pointer doesn't change :/
 			// Checking if drawing succeeded doesn't seem to work :(
 			if (!this->d3d9_canvas.draw(0, 0))
 			{

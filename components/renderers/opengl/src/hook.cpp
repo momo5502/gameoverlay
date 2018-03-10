@@ -8,7 +8,7 @@ namespace gameoverlay
 
 	void hook::frame_handler(HDC hdc)
 	{
-		if (!hdc) return;
+		if (!hdc || !this->glew_initialized.has_value() || !this->glew_initialized.value()) return;
 		if (this->frame_callback) this->frame_callback(hdc);
 	}
 
@@ -17,23 +17,27 @@ namespace gameoverlay
 		this->frame_callback = callback;
 	}
 
-	void hook::unhook()
+	BOOL WINAPI hook::swap_buffers(HDC hdc)
 	{
+		if (!this->glew_initialized.has_value())
+		{
+			this->glew_initialized.emplace(glewInit() == GLEW_OK);
+		}
 
+		this->frame_handler(hdc);
+		return this->swapBuffers_hook.invoke_pascal<bool>(hdc);
 	}
 
-	BOOL WINAPI hook::swapBuffers_stub(HDC hdc)
+	BOOL WINAPI hook::swap_buffers_stub(HDC hdc)
 	{
-		MessageBoxA(0, 0, 0, 0);
-		bool result = hook::instance->swapBuffers_hook.invoke_pascal<bool>(hdc);
-		return result;
+		return hook::instance->swap_buffers(hdc);
 	}
 
 	hook::hook()
 	{
 		hook::instance = this;
 
-		this->swapBuffers_hook.create(::SwapBuffers, hook::swapBuffers_stub);
+		this->swapBuffers_hook.create(::SwapBuffers, hook::swap_buffers_stub);
 	}
 
 	hook::~hook()

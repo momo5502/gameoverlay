@@ -17,8 +17,29 @@ namespace gameoverlay
 		virtual bool paint(const void* buffer) override;
 
 		void draw(HDC hdc);
-		void reset();
+
+		static void get_dimension(HDC hdc, LPPOINT point);
 
 	private:
+
+		HDC hdc = nullptr;
+
+		GLuint texture = 0;
+		GLuint program = 0;
+
+		void* buffer = nullptr;
+		bool update_pending = false;
+
+		std::mutex mutex;
+
+		void prepare(HDC hdc);
+		void draw_internal();
+
+		void release();
+
+		void create(HDC hdc);
+		void create(uint32_t width, uint32_t height);
+
+		void apply_update();
 	};
 }

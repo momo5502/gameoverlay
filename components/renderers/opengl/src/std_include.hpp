@@ -17,3 +17,5 @@
 #include <set>
 
 #include <optional>
+
+#include <GL\glew.h>
