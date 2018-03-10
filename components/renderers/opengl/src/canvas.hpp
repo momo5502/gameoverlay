@@ -30,6 +30,9 @@ namespace gameoverlay
 		void* buffer = nullptr;
 		bool update_pending = false;
 
+		uint32_t width = 0;
+		uint32_t height = 0;
+
 		std::mutex mutex;
 
 		void prepare(HDC hdc);

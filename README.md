@@ -9,11 +9,11 @@ GameOverlay
 
 | Engine     | x86 | x64 |
 |:---------- |:---:|:---:|
-| DirectDraw | ✖ |️ ✖ ️|
-| DirectX 8  | ✖ |️ ✖ ️|
-| DirectX 9  | ✔ |️ ✔ ️|
+| DirectDraw | ✖ | ✖ |
+| DirectX 8  | ✖ | ✖ |
+| DirectX 9  | ✔ | ✔ |
 | DirectX 10 | ✔ | ✔ |
 | DirectX 11 | ✔ | ✔ |
 | DirectX 12 | ✖ | ✖ |
-| OpenGL     | ✖ | ✖ |
+| OpenGL     | ✔ | ✔ |
 | Vulkan     | ✖ | ✖ |

@@ -16,21 +16,13 @@ namespace gameoverlay
 	uint32_t canvas::get_width()
 	{
 		if (!this->is_available()) return 0;
-
-		int w, miplevel = 0;
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_WIDTH, &w);
-
-		return uint32_t(w);
+		return this->width;
 	}
 
 	uint32_t canvas::get_height()
 	{
 		if (!this->is_available()) return 0;
-
-		int h, miplevel = 0;
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, miplevel, GL_TEXTURE_HEIGHT, &h);
-
-		return uint32_t(h);
+		return this->height;
 	}
 
 	bool canvas::paint(const void* _buffer)
@@ -69,8 +61,11 @@ namespace gameoverlay
 		this->create(dim.x, dim.y);
 	}
 
-	void canvas::create(uint32_t width, uint32_t height)
+	void canvas::create(uint32_t _width, uint32_t _height)
 	{
+		this->width = _width;
+		this->height = _height;
+
 		GLint texture2d;
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture2d);
 
@@ -87,10 +82,10 @@ namespace gameoverlay
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-		this->buffer = new char[width * height * 4];
-		ZeroMemory(this->buffer, width * height * 4);
+		this->buffer = new char[this->get_width() * this->get_height() * 4];
+		ZeroMemory(this->buffer, this->get_width() * this->get_height() * 4);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, this->get_width(), this->get_height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 		glBindTexture(GL_TEXTURE_2D, texture2d);
 
 		glPixelStorei(GL_UNPACK_ALIGNMENT, alignment);
@@ -153,11 +148,11 @@ namespace gameoverlay
 		POINT dim;
 		canvas::get_dimension(this->hdc, &dim);
 
-		int s_width = dim.x;
-		int s_weight = dim.y;
+		int source_width = dim.x;
+		int source_weight = dim.y;
 
-		int width = this->get_width();
-		int height = this->get_height();
+		int target_width = this->get_width();
+		int target_height = this->get_height();
 
 		int x = 0;
 		int y = 0;
@@ -175,7 +170,7 @@ namespace gameoverlay
 		glMatrixMode(GL_PROJECTION);
 		glPushMatrix();
 		glLoadIdentity();
-		glOrtho(0.0, (double)s_width, (double)s_weight, 0.0, -1.0, 1.0);
+		glOrtho(0.0, (double)source_width, (double)source_weight, 0.0, -1.0, 1.0);
 		glTranslatef(0.0, 0.0, 0.0);
 		glMatrixMode(GL_MODELVIEW);
 		glPushMatrix();
@@ -194,9 +189,9 @@ namespace gameoverlay
 
 		glBegin(GL_QUADS);
 		glTexCoord2i(0, 0); glVertex3i(x, y, 0);
-		glTexCoord2i(0, 1); glVertex3i(x, (height + y), 0);
-		glTexCoord2i(1, 1); glVertex3i((width + x), (height + y), 0);
-		glTexCoord2i(1, 0); glVertex3i((width + x), y, 0);
+		glTexCoord2i(0, 1); glVertex3i(x, (target_height + y), 0);
+		glTexCoord2i(1, 1); glVertex3i((target_width + x), (target_height + y), 0);
+		glTexCoord2i(1, 0); glVertex3i((target_width + x), y, 0);
 		glEnd();
 
 		glBindTexture(GL_TEXTURE_2D, texture2d);
