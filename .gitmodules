@@ -12,7 +12,10 @@
 	url = https://github.com/Microsoft/DirectXTK.git
 [submodule "deps/glew"]
 	path = deps/glew
-	url = https://github.com/nigels-com/glew
+	url = https://github.com/Perlmint/glew-cmake.git
 [submodule "deps/dxsdk"]
 	path = deps/dxsdk
 	url = https://github.com/devKlausS/dxsdk.git
+[submodule "deps/deps/glew"]
+	path = deps/deps/glew
+	url = https://github.com/Perlmint/glew-cmake.git

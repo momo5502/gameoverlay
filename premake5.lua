@@ -2,6 +2,7 @@ require "deps/premake/fx11"
 require "deps/premake/directxtk"
 require "deps/premake/minhook"
 require "deps/premake/dxsdk"
+require "deps/premake/glew"
 
 workspace "gameoverlay"
 	configurations { "Debug", "Release" }
@@ -15,6 +16,7 @@ workspace "gameoverlay"
 		fx11.import()
 		directxtk.import()
 		minhook.import()
+		glew.import()
 	
 	require "components/test/project"
 	require "components/overlay/project"
@@ -33,6 +35,7 @@ workspace "gameoverlay"
 		fx11.project()
 		directxtk.project()
 		minhook.project()
+		glew.project()
 
 workspace "*"
 	location "./build"
