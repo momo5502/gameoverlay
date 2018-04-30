@@ -3,6 +3,7 @@ require "deps/premake/directxtk"
 require "deps/premake/minhook"
 require "deps/premake/dxsdk"
 require "deps/premake/glew"
+require "deps/premake/cef"
 
 workspace "gameoverlay"
 	configurations { "Debug", "Release" }
@@ -19,8 +20,9 @@ workspace "gameoverlay"
 		glew.import()
 	
 	require "components/test/project"
-	require "components/overlay/project"
 	require "components/generic/project"
+	require "components/overlay/project"
+		cef.import()
 	
 	group "Renderers"
 		require "components/renderers/dxgi/project"
@@ -36,6 +38,7 @@ workspace "gameoverlay"
 		directxtk.project()
 		minhook.project()
 		glew.project()
+		cef.project()
 
 workspace "*"
 	location "./build"
