@@ -1,6 +1,10 @@
 #include "std_include.hpp"
 #include "overlay.hpp"
 
+#include "cef/cef_ui.hpp"
+#include "cef/cef_ui_app.hpp"
+#include "cef/cef_ui_handler.hpp"
+
 using namespace literally::library;
 
 namespace gameoverlay
@@ -8,7 +12,6 @@ namespace gameoverlay
 	std::unique_ptr<renderer_handler> overlay::handler;
 
 	size_t test_size = 0;
-	std::unique_ptr<uint8_t[]> test_buffer;
 
 	void overlay::initialize()
 	{
@@ -23,19 +26,17 @@ namespace gameoverlay
 				auto canvas = renderer->iface->get_canvas();
 				if (canvas && canvas->is_available())
 				{
-					auto canvas_size = canvas->get_width() * canvas->get_height() * 4;
-					if (test_size != canvas_size || !test_buffer)
+					auto ui_handler = cef_ui_handler::get_instance();
+					if (ui_handler)
 					{
-						test_size = canvas_size;
-						test_buffer = std::make_unique<uint8_t[]>(canvas_size);
+						ui_handler->set_canvas(canvas);
 
-						auto ptr = test_buffer.get();
-						for (size_t i = 0; i < test_size; ++i)
+						auto canvas_size = canvas->get_width() | (canvas->get_height() << 16);
+						if (test_size != canvas_size)
 						{
-							ptr[i] = static_cast<unsigned char>(i);
+							test_size = canvas_size;
+							ui_handler->trigger_resize();
 						}
-
-						canvas->paint(ptr);
 					}
 				}
 			});

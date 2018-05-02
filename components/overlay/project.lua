@@ -13,6 +13,10 @@
 			"if not exist \"%{wks.location}runtime\\%{cfg.platform}\\%{cfg.buildcfg}\" mkdir \"%{wks.location}runtime\\%{cfg.platform}\\%{cfg.buildcfg}\"",
 			"copy /y \"$(TargetPath)\" \"%{wks.location}runtime\\%{cfg.platform}\\%{cfg.buildcfg}\"",
 		}
+		
+		includedirs {
+			"src"
+		}
 
 		pchheader "std_include.hpp"
 		pchsource "src/std_include.cpp"
