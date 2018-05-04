@@ -55,7 +55,7 @@ namespace gameoverlay
 		void trigger_resize();
 
 	private:
-		icanvas* canvas;
+		icanvas* canvas = nullptr;
 
 		CefRefPtr<cef_ui_app> app;
 		std::vector<CefRefPtr<CefBrowser>> browserList;

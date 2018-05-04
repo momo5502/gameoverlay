@@ -27,9 +27,9 @@ namespace gameoverlay
 #endif
 
 		CefString(&settings.browser_subprocess_path) = proc.get_path();
-		CefString(&settings.locales_dir_path) = ".\\cef\\locales";
-		CefString(&settings.resources_dir_path) = proc.get_folder() + "cef";
-		CefString(&settings.log_file) = ".\\cef\\debug.log";
+		CefString(&settings.locales_dir_path) = this->path + "cef\\locales";
+		CefString(&settings.resources_dir_path) = this->path + "cef";
+		CefString(&settings.log_file) = this->path + "cef\\debug.log";
 		CefString(&settings.locale) = "en-US";
 
 		CefInitialize(args, settings, this->get_app(), 0);
@@ -44,7 +44,10 @@ namespace gameoverlay
 
 	cef_ui::cef_ui()
 	{
-		dynlib::add_load_path("cef");
+		dynlib self = dynlib::get_by_address(dynlib::get_by_address);
+		this->path = self.get_folder();
+
+		dynlib::add_load_path(this->path + "cef");
 		dynlib libcef("libcef.dll", true);
 		if (!libcef.is_valid() || !libcef.delay_import())
 		{

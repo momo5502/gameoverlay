@@ -31,6 +31,7 @@ namespace gameoverlay
 		CefRefPtr<cef_ui_app> get_app();
 
 	private:
+		std::string path;
 		std::thread ui_thread;
 		CefRefPtr<cef_ui_app> app;
 
