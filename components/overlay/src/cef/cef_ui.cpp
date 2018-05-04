@@ -12,31 +12,34 @@ namespace gameoverlay
 		dynlib proc;
 		CefMainArgs args(proc.get_handle());
 
-		CefRefPtr<cef_ui_app> cefApplication(new cef_ui_app());
-
-		CefSettings cSettings;
-		cSettings.no_sandbox = TRUE;
-		cSettings.single_process = TRUE;
-		cSettings.windowless_rendering_enabled = TRUE;
-		cSettings.pack_loading_disabled = FALSE;
-		cSettings.remote_debugging_port = 12345;
+		CefSettings settings;
+		settings.no_sandbox = TRUE;
+		settings.single_process = TRUE;
+		settings.windowless_rendering_enabled = TRUE;
+		settings.pack_loading_disabled = FALSE;
+		settings.remote_debugging_port = 12345;
 
 #ifdef DEBUG
-		cSettings.log_severity = LOGSEVERITY_VERBOSE;
+		settings.log_severity = LOGSEVERITY_VERBOSE;
 
 #else
-		cSettings.log_severity = LOGSEVERITY_DISABLE;
+		settings.log_severity = LOGSEVERITY_DISABLE;
 #endif
 
-		CefString(&cSettings.browser_subprocess_path) = proc.get_path();
-		CefString(&cSettings.locales_dir_path) = ".\\cef\\locales";
-		CefString(&cSettings.resources_dir_path) = proc.get_folder() + "cef";
-		CefString(&cSettings.log_file) = ".\\cef\\debug.log";
-		CefString(&cSettings.locale) = "en-US";
+		CefString(&settings.browser_subprocess_path) = proc.get_path();
+		CefString(&settings.locales_dir_path) = ".\\cef\\locales";
+		CefString(&settings.resources_dir_path) = proc.get_folder() + "cef";
+		CefString(&settings.log_file) = ".\\cef\\debug.log";
+		CefString(&settings.locale) = "en-US";
 
-		CefInitialize(args, cSettings, cefApplication, 0);
+		CefInitialize(args, settings, this->get_app(), 0);
 		CefRunMessageLoop();
 		CefShutdown();
+	}
+
+	CefRefPtr<cef_ui_app> cef_ui::get_app()
+	{
+		return this->app;
 	}
 
 	cef_ui::cef_ui()
@@ -48,6 +51,7 @@ namespace gameoverlay
 			throw std::runtime_error("Unable to import libcef");
 		}
 
+		this->app = new cef_ui_app();
 		this->ui_thread = std::thread(std::bind(&cef_ui::ui_runner, this));
 
 		CefEnableHighDPISupport();

@@ -8,7 +8,12 @@ namespace gameoverlay
 {
 	cef_ui_app::cef_ui_app()
 	{
+		this->client = new cef_ui_handler(this);
+	}
 
+	CefRefPtr<cef_ui_handler> cef_ui_app::get_client()
+	{
+		return this->client;
 	}
 
 	void cef_ui_app::OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context)
@@ -30,7 +35,7 @@ namespace gameoverlay
 		windowInfo.SetAsWindowless(GetDesktopWindow());
 		windowInfo.windowless_rendering_enabled = TRUE;
 
-		CefBrowserHost::CreateBrowser(windowInfo, new cef_ui_handler(this), url, browserSettings, NULL);
+		CefBrowserHost::CreateBrowser(windowInfo, this->get_client(), url, browserSettings, NULL);
 	}
 
 	void cef_ui_app::OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame, CefRefPtr<CefV8Context> context)

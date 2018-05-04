@@ -6,21 +6,14 @@
 
 namespace gameoverlay
 {
-	cef_ui_handler* cef_ui_handler::instance = nullptr;
-
-	cef_ui_handler* cef_ui_handler::get_instance()
-	{
-		return cef_ui_handler::instance;
-	}
-
 	cef_ui_handler::cef_ui_handler(CefRefPtr<cef_ui_app> _app) : app(_app)
 	{
-		cef_ui_handler::instance = this;
+
 	}
 
 	cef_ui_handler::~cef_ui_handler()
 	{
-		cef_ui_handler::instance = nullptr;
+
 	}
 
 	void cef_ui_handler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
@@ -102,6 +95,10 @@ namespace gameoverlay
 		if (this->canvas)
 		{
 			rect.Set(0, 0, this->canvas->get_width(), this->canvas->get_height());
+		}
+		else
+		{
+			rect.Set(0, 0, 640, 480);
 		}
 
 		return true;

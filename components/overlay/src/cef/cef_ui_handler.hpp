@@ -9,8 +9,6 @@ namespace gameoverlay
 	class cef_ui_handler : public CefClient, public CefDisplayHandler, public CefLifeSpanHandler, public CefRenderHandler, public CefLoadHandler, public CefContextMenuHandler
 	{
 	public:
-		static cef_ui_handler* get_instance();
-
         explicit cef_ui_handler(CefRefPtr<cef_ui_app> app);
 		~cef_ui_handler();
 
@@ -57,7 +55,6 @@ namespace gameoverlay
 		void trigger_resize();
 
 	private:
-		static cef_ui_handler* instance;
 		icanvas* canvas;
 
 		CefRefPtr<cef_ui_app> app;

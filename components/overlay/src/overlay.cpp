@@ -1,15 +1,12 @@
 #include "std_include.hpp"
 #include "overlay.hpp"
 
-#include "cef/cef_ui.hpp"
-#include "cef/cef_ui_app.hpp"
-#include "cef/cef_ui_handler.hpp"
-
 using namespace literally::library;
 
 namespace gameoverlay
 {
 	std::unique_ptr<renderer_handler> overlay::handler;
+	std::unique_ptr<cef_ui> overlay::ui;
 
 	size_t test_size = 0;
 
@@ -18,6 +15,8 @@ namespace gameoverlay
 		overlay::handler = std::make_unique<renderer_handler>();
 		overlay::handler->on_renderer_available([]()
 		{
+			overlay::ui = std::make_unique<cef_ui>();
+
 			overlay::handler->get_renderer()->iface->register_frame_callback([]()
 			{
 				if (!overlay::handler) return;
@@ -26,17 +25,21 @@ namespace gameoverlay
 				auto canvas = renderer->iface->get_canvas();
 				if (canvas && canvas->is_available())
 				{
-					auto ui_handler = cef_ui_handler::get_instance();
-					if (ui_handler)
-					{
-						ui_handler->set_canvas(canvas);
+					if (!overlay::ui) return;
 
-						auto canvas_size = canvas->get_width() | (canvas->get_height() << 16);
-						if (test_size != canvas_size)
-						{
-							test_size = canvas_size;
-							ui_handler->trigger_resize();
-						}
+					auto app = overlay::ui->get_app();
+					if (!app) return;
+
+					auto client = app->get_client();
+					if (!client) return;
+
+					client->set_canvas(canvas);
+
+					auto canvas_size = canvas->get_width() | (canvas->get_height() << 16);
+					if (test_size != canvas_size)
+					{
+						test_size = canvas_size;
+						client->trigger_resize();
 					}
 				}
 			});
@@ -46,5 +49,6 @@ namespace gameoverlay
 	void overlay::uninitialize()
 	{
 		overlay::handler = {};
+		overlay::ui = {};
 	}
 }

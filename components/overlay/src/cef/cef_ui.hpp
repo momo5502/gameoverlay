@@ -20,14 +20,19 @@
 
 namespace gameoverlay
 {
+	class cef_ui_app;
+
 	class cef_ui
 	{
 	public:
 		cef_ui();
 		~cef_ui();
 
+		CefRefPtr<cef_ui_app> get_app();
+
 	private:
 		std::thread ui_thread;
+		CefRefPtr<cef_ui_app> app;
 
 		void ui_runner();
 	};
