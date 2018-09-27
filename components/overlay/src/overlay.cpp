@@ -27,10 +27,7 @@ namespace gameoverlay
 				{
 					if (!overlay::ui) return;
 
-					auto app = overlay::ui->get_app();
-					if (!app) return;
-
-					auto client = app->get_client();
+					auto client = overlay::ui->get_client();
 					if (!client) return;
 
 					client->set_canvas(canvas);

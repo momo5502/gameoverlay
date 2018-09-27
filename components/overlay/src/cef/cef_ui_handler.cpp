@@ -1,12 +1,11 @@
 #include "std_include.hpp"
 
 #include "cef/cef_ui.hpp"
-#include "cef/cef_ui_app.hpp"
 #include "cef/cef_ui_handler.hpp"
 
 namespace gameoverlay
 {
-	cef_ui_handler::cef_ui_handler(CefRefPtr<cef_ui_app> _app) : app(_app)
+	cef_ui_handler::cef_ui_handler()
 	{
 
 	}
@@ -19,23 +18,23 @@ namespace gameoverlay
 	void cef_ui_handler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 	{
 		CEF_REQUIRE_UI_THREAD();
-		browserList.push_back(browser);
+		browser_list.push_back(browser);
 	}
 
 	void cef_ui_handler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
 	{
 		CEF_REQUIRE_UI_THREAD();
 
-		for (auto bit = this->browserList.begin(); bit != this->browserList.end(); ++bit)
+		for (auto bit = this->browser_list.begin(); bit != this->browser_list.end(); ++bit)
 		{
 			if ((*bit)->IsSame(browser))
 			{
-				browserList.erase(bit);
+				browser_list.erase(bit);
 				break;
 			}
 		}
 
-		if (browserList.empty())
+		if (browser_list.empty())
 		{
 			CefQuitMessageLoop();
 		}
@@ -61,19 +60,19 @@ namespace gameoverlay
 		return false;
 	}
 
-	void cef_ui_handler::closeAllBrowsers(bool forceClose)
+	void cef_ui_handler::close_all_browsers(bool force_close)
 	{
-		if (this->browserList.empty()) return;
+		if (this->browser_list.empty()) return;
 
 		if (!CefCurrentlyOn(TID_UI))
 		{
-			CefPostTask(TID_UI, base::Bind(&cef_ui_handler::closeAllBrowsers, this, forceClose));
+			CefPostTask(TID_UI, base::Bind(&cef_ui_handler::close_all_browsers, this, force_close));
 			return;
 		}
 
-		for (auto& browser : this->browserList)
+		for (auto& browser : this->browser_list)
 		{
-			browser->GetHost()->CloseBrowser(forceClose);
+			browser->GetHost()->CloseBrowser(force_close);
 		}
 	}
 
@@ -84,7 +83,7 @@ namespace gameoverlay
 
 	void cef_ui_handler::trigger_resize()
 	{
-		for (auto& browser : this->browserList)
+		for (auto& browser : this->browser_list)
 		{
 			browser->GetHost()->WasResized();
 		}
@@ -104,7 +103,7 @@ namespace gameoverlay
 		return true;
 	}
 
-	void cef_ui_handler::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType /*type*/, const RectList& /*dirtyRects*/, const void* buffer, int width, int height)
+	void cef_ui_handler::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType /*type*/, const RectList& /*dirty_rects*/, const void* buffer, int width, int height)
 	{
 		//Components::XUI::UpdateTexture(buffer, width, height);
 		if (!this->canvas) return;

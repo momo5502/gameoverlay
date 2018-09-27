@@ -23,7 +23,9 @@ workspace "gameoverlay"
 	require "components/generic/project"
 	require "components/overlay/project"
 		cef.import()
-	
+	require "components/process/project"
+		cef.import()
+
 	group "Renderers"
 		require "components/renderers/dxgi/project"
 		require "components/renderers/d3d9/project"

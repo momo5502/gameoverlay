@@ -21,6 +21,7 @@
 namespace gameoverlay
 {
 	class cef_ui_app;
+	class cef_ui_handler;
 
 	class cef_ui
 	{
@@ -29,12 +30,19 @@ namespace gameoverlay
 		~cef_ui();
 
 		CefRefPtr<cef_ui_app> get_app();
+		CefRefPtr<cef_ui_handler> get_client();
+
+		void close_browser();
 
 	private:
 		std::string path;
 		std::thread ui_thread;
 		CefRefPtr<cef_ui_app> app;
+		CefRefPtr<cef_ui_handler> client;
+		CefRefPtr<CefBrowser> browser;
 
 		void ui_runner();
+
+		static void invoke_close_browser(CefRefPtr<CefBrowser> browser);
 	};
 }

@@ -2,14 +2,10 @@
 
 namespace gameoverlay
 {
-	class cef_ui_handler;
-
 	class cef_ui_app : public CefApp, public CefBrowserProcessHandler, public CefRenderProcessHandler
 	{
 	public:
 		cef_ui_app();
-
-		CefRefPtr<cef_ui_handler> get_client();
 
 		virtual CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override
 		{
@@ -31,8 +27,6 @@ namespace gameoverlay
 
 
 	private:
-		CefRefPtr<cef_ui_handler> client;
-
 		IMPLEMENT_REFCOUNTING(cef_ui_app);
 	};
 }
