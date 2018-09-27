@@ -19,3 +19,7 @@
 [submodule "deps/deps/glew"]
 	path = deps/deps/glew
 	url = https://github.com/Perlmint/glew-cmake.git
+[submodule "deps/cef"]
+	path = deps/cef
+	url = https://git.kthx.at/0x90/cef.git
+	shallow = true
