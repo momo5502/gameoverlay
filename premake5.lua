@@ -1,94 +1,134 @@
-require "deps/premake/fx11"
-require "deps/premake/directxtk"
-require "deps/premake/minhook"
-require "deps/premake/dxsdk"
-require "deps/premake/glew"
-require "deps/premake/cef"
+dependencies = {
+	basePath = "./deps"
+}
+
+function dependencies.load()
+	dir = path.join(dependencies.basePath, "premake/*.lua")
+	deps = os.matchfiles(dir)
+
+	for i, dep in pairs(deps) do
+		dep = dep:gsub(".lua", "")
+		require(dep)
+	end
+end
+
+function dependencies.imports()
+	for i, proj in pairs(dependencies) do
+		if type(i) == 'number' then
+			proj.import()
+		end
+	end
+end
+
+function dependencies.projects()
+	for i, proj in pairs(dependencies) do
+		if type(i) == 'number' then
+			proj.project()
+		end
+	end
+end
+
+dependencies.load()
 
 workspace "gameoverlay"
-	configurations { "Debug", "Release" }
-	platforms { "Win32", "Win64" }
-	
-	project "*"
-		includedirs {
-			"deps/literally/include"
-		}
-		
-		fx11.import()
-		directxtk.import()
-		minhook.import()
-		glew.import()
-	
-	require "components/test/project"
-	require "components/generic/project"
-	require "components/overlay/project"
-		cef.import()
-	require "components/process/project"
-		cef.import()
+startproject "gameoverlay"
+location "./build"
+objdir "%{wks.location}/obj"
+targetdir "%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}"
 
-	group "Renderers"
-		require "components/renderers/dxgi/project"
-		require "components/renderers/d3d9/project"
-		require "components/renderers/opengl/project"
-		
-		-- Import the directxsdk only for the d3d9 renderer
-		project "renderer_d3d9"
-			dxsdk.import()
-		
-	group "Dependencies"
-		fx11.project()
-		directxtk.project()
-		minhook.project()
-		glew.project()
-		cef.project()
+configurations {"Debug", "Release"}
 
-workspace "*"
-	location "./build"
-	objdir "%{wks.location}/obj"
-	targetdir "%{wks.location}/bin/%{cfg.platform}/%{cfg.buildcfg}"
-	buildlog "%{wks.location}/obj/%{cfg.platform}/%{cfg.buildcfg}/%{prj.name}/%{prj.name}.log"
-	
+if os.istarget("darwin") then
+	platforms { "x64", "arm" }
+else
+	platforms { "x86", "x64" }
+end
+
+filter "platforms:x86"
+architecture "x32"
+
+filter "platforms:x64"
+architecture "x64"
+
+filter "platforms:arm"
+architecture "ARM"
+buildoptions { "-arch arm64" }
+linkoptions { "-arch arm64" }
+
+filter { "language:C++", "toolset:not msc*" }
+	buildoptions {
+		"-std=c++20"
+	}
+filter "toolset:msc*"
 	buildoptions {
 		"/std:c++latest"
 	}
+filter {}
 
-	filter "toolset:msc*"
-		buildoptions { "/utf-8", "/Zm200" }
-	
-	filter "platforms:*32"
-		architecture "x86"
-	
-	filter "platforms:*64"
-		architecture "x86_64"
-	
-	filter "platforms:Win*"
-		system "windows"
-		defines { "_WINDOWS" }
-	
-	filter {}
+systemversion "latest"
+symbols "On"
+staticruntime "On"
+editandcontinue "Off"
+warnings "Extra"
+characterset "ASCII"
 
-	flags {
-		"StaticRuntime",
-		"NoIncrementalLink",
-		"NoMinimalRebuild",
-		"MultiProcessorCompile",
-		"No64BitChecks",
-		"UndefinedIdentifiers"
+if os.istarget("linux") or os.istarget("darwin") then
+	buildoptions { "-pthread" }
+	linkoptions { "-pthread" }
+end
+
+if _OPTIONS["dev-build"] then
+	defines {"DEV_BUILD"}
+end
+
+if os.getenv("CI") then
+	defines {"CI"}
+end
+
+flags {"NoIncrementalLink", "NoMinimalRebuild", "MultiProcessorCompile", "No64BitChecks"}
+
+configuration "Release"
+optimize "Speed"
+
+defines {"NDEBUG"}
+
+flags {"FatalCompileWarnings"}
+
+configuration "Debug"
+optimize "Debug"
+
+defines {"DEBUG", "_DEBUG"}
+
+configuration {}
+
+project "gameoverlay"
+kind "ConsoleApp"
+language "C++"
+
+pchheader "std_include.hpp"
+pchsource "src/std_include.cpp"
+
+files {"./src/**.rc", "./src/**.hpp", "./src/**.cpp"}
+
+includedirs {"./src", "%{prj.location}/src"}
+
+filter "system:windows"
+	files {
+		"./src/**.rc",
 	}
-	
-	largeaddressaware "on"
-	editandcontinue "Off"
-	warnings "Extra"
-	symbols "On"
+filter { "system:windows", "toolset:not msc*" }
+	resincludedirs {
+		"%{_MAIN_SCRIPT_DIR}/src"
+	}
+filter { "system:windows", "toolset:msc*" }
+	linkoptions {"/IGNORE:4254", "/SAFESEH:NO", "/LARGEADDRESSAWARE", "/PDBCompress"}
+	resincludedirs {
+		"$(ProjectDir)src" -- fix for VS IDE
+	}
+filter {}
 
-	configuration "Release*"
-		defines { "NDEBUG" }
-		optimize "On"
-		flags {
-			"FatalCompileWarnings",
-			"FatalLinkWarnings",
-		}
+dependencies.imports()
 
-	configuration "Debug*"
-		defines { "DEBUG", "_DEBUG" }
-		optimize "Debug"
+
+group "Dependencies"
+dependencies.projects()
