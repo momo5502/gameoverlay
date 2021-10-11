@@ -102,7 +102,7 @@ defines {"DEBUG", "_DEBUG"}
 configuration {}
 
 project "gameoverlay"
-kind "ConsoleApp"
+kind "SharedLib"
 language "C++"
 
 pchheader "std_include.hpp"

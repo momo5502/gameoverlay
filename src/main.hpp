@@ -1,5 +1,4 @@
-#include <std_include.hpp>
-#include "main.hpp"
+#pragma once
 
 namespace gameoverlay {
 
@@ -7,9 +6,6 @@ namespace gameoverlay {
  *
  ****************************************************************************/
 
-void initialize()
-{
-	// 
-}
+void initialize();
 
 }

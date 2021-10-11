@@ -1,15 +1,15 @@
-#include <std_include.hpp>
-#include "main.hpp"
+#pragma once
+#include "canvas.hpp"
 
-namespace gameoverlay {
+#include <functional>
 
 /*****************************************************************************
  *
  ****************************************************************************/
 
-void initialize()
-{
-	// 
-}
+class rendering_hook {
+public:
+	virtual ~rendering_hook();
+};
 
-}
+

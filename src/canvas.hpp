@@ -16,9 +16,7 @@ struct dimensions {
 
 class canvas {
 public:
+	virtual ~canvas() = default;
 	virtual dimensions get_dimensions() const = 0;
 	virtual void paint(const void* image) = 0;
-
-protected:
-	virtual ~canvas() = default;
 };
