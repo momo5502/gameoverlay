@@ -1,13 +1,12 @@
 #pragma once
 #include "canvas.hpp"
 
-#include <functional>
-
 /*****************************************************************************
  *
  ****************************************************************************/
 
-enum class backend_type {
+enum class backend_type
+{
 	d3d8,
 	d3d9,
 	d3d9ex,
@@ -22,19 +21,34 @@ enum class backend_type {
  *
  ****************************************************************************/
 
-class renderer {
+class renderer
+{
 public:
-	using frame_handler = std::function<void(canvas&)>;
+	renderer() = default;
+
+	renderer(renderer&&) = delete;
+	renderer(const renderer&) = delete;
+	renderer& operator=(renderer&&) = delete;
+	renderer& operator=(const renderer&) = delete;
 
 	virtual ~renderer() = default;
 	virtual backend_type get_backend_type() const = 0;
-
-	void set_frame_handler(frame_handler handler);
+	//virtual void* get_native_window() const = 0;
 
 protected:
-	renderer() = default;
-	void on_frame(canvas& canvas) const;
+	void on_frame(canvas& canvas);
+};
 
-private:
-	frame_handler handler_{};
+/*****************************************************************************
+ *
+ ****************************************************************************/
+
+template <backend_type Type>
+class typed_renderer : public renderer
+{
+public:
+	backend_type get_backend_type() const override
+	{
+		return Type;
+	}
 };

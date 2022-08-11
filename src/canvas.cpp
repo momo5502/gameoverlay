@@ -1,22 +1,20 @@
 #include <std_include.hpp>
-#include "renderer.hpp"
+#include "canvas.hpp"
 
 /*****************************************************************************
  *
  ****************************************************************************/
 
-void renderer::set_frame_handler(frame_handler handler)
+uint32_t canvas::get_width() const
 {
-	this->handler_ = std::move(handler);
+	return this->get_dimensions().height;
 }
 
 /*****************************************************************************
  *
  ****************************************************************************/
 
-void renderer::on_frame(canvas& canvas) const
+uint32_t canvas::get_height() const
 {
-	if (this->handler_) {
-		this->handler_(canvas);
-	}
+	return this->get_dimensions().width;
 }
