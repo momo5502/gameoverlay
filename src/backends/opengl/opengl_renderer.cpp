@@ -32,8 +32,10 @@ namespace gameoverlay::opengl
 		return dim;
 	}
 
+
 	renderer::renderer(const HDC hdc)
-		: hdc_(hdc)
+		: window_renderer(WindowFromDC(hdc)),
+		  hdc_(hdc)
 	{
 		initialize_glew();
 	}

@@ -1,53 +1,36 @@
 #include <std_include.hpp>
-#include "gameoverlay.hpp"
-#include "utils/concurrency.hpp"
 #include <thread>
+
+#include "backend_registry.hpp"
+
+#include "utils/hook.hpp"
 
 namespace gameoverlay
 {
-	using backend_initializers = std::vector<std::function<void()>>;
-
-	/*****************************************************************************
-	 *
-	 ****************************************************************************/
-
-	utils::concurrency::container<backend_initializers>& get_backends()
-	{
-		static utils::concurrency::container<backend_initializers> backends{};
-		return backends;
-	}
-
-	/*****************************************************************************
-	 *
-	 ****************************************************************************/
-
-	register_backend::register_backend(std::function<void()> backend)
-	{
-		get_backends().access([&](backend_initializers& backends)
-		{
-			backends.emplace_back(std::move(backend));
-		});
-	}
-
-	/*****************************************************************************
-	 *
-	 ****************************************************************************/
-
-	void initialize()
-	{
-		get_backends().access([&](backend_initializers& backends)
-		{
-			for (auto& initializer : backends)
-			{
-				initializer();
-			}
-
-			backends.clear();
-		});
-	}
-
 	namespace
 	{
+		utils::hook::detour destroy_window_hook;
+
+		/*****************************************************************************
+		 *
+		 ****************************************************************************/
+
+		BOOL WINAPI destroy_window_stub(const HWND window)
+		{
+			backend_registry::on_window_destruction(window);
+			return destroy_window_hook.invoke_stdcall<BOOL>(window);
+		}
+
+		/*****************************************************************************
+		 *
+		 ****************************************************************************/
+
+		void initialize()
+		{
+			destroy_window_hook.create(::DestroyWindow, destroy_window_stub);
+			backend_registry::initialize();
+		}
+
 		/*****************************************************************************
 		 *
 		 ****************************************************************************/

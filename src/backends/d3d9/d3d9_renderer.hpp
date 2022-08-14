@@ -7,7 +7,7 @@
 
 namespace gameoverlay::d3d9
 {
-	class renderer : public typed_renderer<backend_type::d3d9>
+	class renderer : public window_renderer<backend_type::d3d9>
 	{
 	public:
 		renderer(IDirect3DDevice9* device);

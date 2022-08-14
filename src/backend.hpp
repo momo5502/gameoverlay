@@ -1,5 +1,4 @@
 #pragma once
-#include <functional>
 
 namespace gameoverlay
 {
@@ -7,9 +6,18 @@ namespace gameoverlay
 	 *
 	 ****************************************************************************/
 
-	class register_backend
+	class backend
 	{
 	public:
-		register_backend(std::function<void()> backend_initializer);
+		virtual ~backend() = default;
+
+		virtual void initialize()
+		{
+		}
+
+		virtual void on_window_destruction(const HWND window)
+		{
+			(void)window;
+		}
 	};
 }

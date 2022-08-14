@@ -4,7 +4,7 @@
 #include "../../utils/finally.hpp"
 #include "../../utils/concurrent_map.hpp"
 
-#include "../../gameoverlay.hpp"
+#include "../../backend_registry.hpp"
 
 #include "opengl_renderer.hpp"
 
@@ -17,7 +17,6 @@ namespace gameoverlay::opengl
 
 		utils::hook::detour swap_buffers_hook;
 		utils::hook::detour delete_dc_hook;
-		utils::hook::detour destroy_window_hook;
 
 		void draw_frame(const HDC hdc)
 		{
@@ -42,23 +41,23 @@ namespace gameoverlay::opengl
 			return delete_dc_hook.invoke_stdcall<BOOL>(hdc);
 		}
 
-		BOOL WINAPI destroy_window_stub(const HWND window)
+		class backend : public ::gameoverlay::backend
 		{
-			const auto dc = GetDC(window);
-			const auto _ = utils::finally([&] { ReleaseDC(window, dc); });
+			void initialize() override
+			{
+				swap_buffers_hook.create(::SwapBuffers, swap_buffers_stub);
+				delete_dc_hook.create(::DeleteDC, delete_dc_stub);
+			}
 
-			renderers.remove(dc);
+			void on_window_destruction(const HWND window) override
+			{
+				const auto dc = GetDC(window);
+				const auto _ = utils::finally([&] { ReleaseDC(window, dc); });
 
-			return destroy_window_hook.invoke_stdcall<BOOL>(window);
-		}
+				renderers.remove(dc);
+			}
+		};
 	}
-
-	void initialize()
-	{
-		swap_buffers_hook.create(::SwapBuffers, swap_buffers_stub);
-		delete_dc_hook.create(::DeleteDC, delete_dc_stub);
-		destroy_window_hook.create(::DestroyWindow, destroy_window_stub);
-	}
-
-	static register_backend _(initialize);
 }
+
+REGISTER_BACKEND(gameoverlay::opengl::backend);

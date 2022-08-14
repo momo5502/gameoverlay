@@ -1,7 +1,7 @@
 #include "std_include.hpp"
 
 #include "../../utils/hook.hpp"
-#include "../../gameoverlay.hpp"
+#include "../../backend_registry.hpp"
 #include "../../utils/concurrent_map.hpp"
 
 #include "d3d9_renderer.hpp"
@@ -82,46 +82,59 @@ namespace gameoverlay::d3d9
 			return swap_chain_present_hook.invoke_stdcall<HRESULT>(swap_chain, source_rect, dest_rect,
 			                                                       dest_window_override, dirty_region, flags);
 		}
-	}
 
-	void initialize()
-	{
-		const CComPtr direct3d = Direct3DCreate9(D3D_SDK_VERSION);
-		if (!direct3d) return;
-
-		D3DPRESENT_PARAMETERS pres_params{};
-		ZeroMemory(&pres_params, sizeof(pres_params));
-		pres_params.Windowed = TRUE;
-		pres_params.SwapEffect = D3DSWAPEFFECT_DISCARD;
-		pres_params.BackBufferFormat = D3DFMT_UNKNOWN;
-		pres_params.BackBufferCount = 1;
-
-		CComPtr<IDirect3DDevice9> device{};
-		direct3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetDesktopWindow(),
-		                       D3DCREATE_SOFTWARE_VERTEXPROCESSING | D3DCREATE_MULTITHREADED, &pres_params, &device);
-		if (!device)
+		class backend : public ::gameoverlay::backend
 		{
-			return;
-		}
+			void initialize() override
+			{
+				const CComPtr direct3d = Direct3DCreate9(D3D_SDK_VERSION);
+				if (!direct3d) return;
 
-		CComPtr<IDirect3DSwapChain9> swap_chain{};
-		device->GetSwapChain(0, &swap_chain);
+				D3DPRESENT_PARAMETERS pres_params{};
+				ZeroMemory(&pres_params, sizeof(pres_params));
+				pres_params.Windowed = TRUE;
+				pres_params.SwapEffect = D3DSWAPEFFECT_DISCARD;
+				pres_params.BackBufferFormat = D3DFMT_UNKNOWN;
+				pres_params.BackBufferCount = 1;
 
-		auto* device_release = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Release);
-		device_release_hook.create(device_release, device_release_stub);
+				CComPtr<IDirect3DDevice9> device{};
+				direct3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetDesktopWindow(),
+				                       D3DCREATE_SOFTWARE_VERTEXPROCESSING | D3DCREATE_MULTITHREADED, &pres_params,
+				                       &device);
+				if (!device)
+				{
+					return;
+				}
 
-		auto* device_present = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Present);
-		device_present_hook.create(device_present, device_present_stub);
+				CComPtr<IDirect3DSwapChain9> swap_chain{};
+				device->GetSwapChain(0, &swap_chain);
 
-		auto* device_reset = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Reset);
-		device_reset_hook.create(device_reset, device_reset_stub);
+				auto* device_release = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Release);
+				device_release_hook.create(device_release, device_release_stub);
 
-		if (swap_chain)
-		{
-			auto* swap_chain_present = *utils::hook::get_vtable_entry(&*swap_chain, &IDirect3DSwapChain9::Present);
-			swap_chain_present_hook.create(swap_chain_present, swap_chain_present_stub);
-		}
+				auto* device_present = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Present);
+				device_present_hook.create(device_present, device_present_stub);
+
+				auto* device_reset = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Reset);
+				device_reset_hook.create(device_reset, device_reset_stub);
+
+				if (swap_chain)
+				{
+					auto* swap_chain_present = *utils::hook::get_vtable_entry(
+						&*swap_chain, &IDirect3DSwapChain9::Present);
+					swap_chain_present_hook.create(swap_chain_present, swap_chain_present_stub);
+				}
+			}
+
+			void on_window_destruction(const HWND window) override
+			{
+				renderers.remove_if([&](IDirect3DDevice9*, const std::unique_ptr<renderer>& renderer) -> bool
+				{
+					return renderer->get_window() == window;
+				});
+			}
+		};
 	}
-
-	static register_backend _(initialize);
 }
+
+REGISTER_BACKEND(gameoverlay::d3d9::backend);

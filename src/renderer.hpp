@@ -32,7 +32,7 @@ public:
 
 	virtual ~renderer() = default;
 	virtual backend_type get_backend_type() const = 0;
-	//virtual void* get_native_window() const = 0;
+	virtual HWND get_window() const = 0;
 
 protected:
 	void on_frame(canvas& canvas);
@@ -50,4 +50,26 @@ public:
 	{
 		return Type;
 	}
+};
+
+/*****************************************************************************
+ *
+ ****************************************************************************/
+
+template <backend_type Type>
+class window_renderer : public typed_renderer<Type>
+{
+public:
+	window_renderer(const HWND window)
+		: window_(window)
+	{
+	}
+
+	HWND get_window() const override
+	{
+		return this->window_;
+	}
+
+private:
+	HWND window_{};
 };

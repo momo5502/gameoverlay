@@ -9,9 +9,9 @@
 namespace gameoverlay::d3d9
 {
 	canvas::canvas(IDirect3DDevice9* device, const uint32_t width, const uint32_t height)
-		: device_(device),
-		  width_(width),
-		  height_(height)
+		: fixed_canvas(width, height),
+		  device_(device)
+
 	{
 		if (FAILED(D3DXCreateSprite(this->device_, &this->sprite_)))
 		{
@@ -19,16 +19,11 @@ namespace gameoverlay::d3d9
 		}
 
 		if (FAILED(
-			this->device_->CreateTexture(this->width_, this->height_, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8,
+			this->device_->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8,
 				D3DPOOL_DEFAULT, &this->texture_, nullptr)))
 		{
 			throw std::runtime_error("Failed to create texture");
 		}
-	}
-
-	dimensions canvas::get_dimensions() const
-	{
-		return {this->width_, this->height_};
 	}
 
 	void canvas::paint(const void* image)
@@ -53,10 +48,10 @@ namespace gameoverlay::d3d9
 			this->texture_->UnlockRect(0); //
 		});
 
-		const auto bytes_per_pixel = static_cast<uint32_t>(locked_rect.Pitch) / this->width_;
+		const auto bytes_per_pixel = static_cast<uint32_t>(locked_rect.Pitch) / this->get_width();
 		assert(bytes_per_pixel == 4);
 
-		memcpy(locked_rect.pBits, image, this->width_ * this->height_ * bytes_per_pixel);
+		memcpy(locked_rect.pBits, image, this->get_width() * this->get_height() * bytes_per_pixel);
 	}
 
 	void canvas::draw() const

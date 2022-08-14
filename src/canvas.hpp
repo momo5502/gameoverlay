@@ -42,3 +42,19 @@ public:
 	uint32_t get_width() const;
 	uint32_t get_height() const;
 };
+
+/*****************************************************************************
+ *
+ ****************************************************************************/
+
+class fixed_canvas : public canvas
+{
+public:
+	fixed_canvas(uint32_t width, uint32_t height);
+
+	dimensions get_dimensions() const override;
+
+private:
+	uint32_t width_{};
+	uint32_t height_{};
+};

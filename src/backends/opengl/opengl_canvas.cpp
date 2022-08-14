@@ -99,8 +99,7 @@ namespace gameoverlay::opengl
 	}
 
 	canvas::canvas(const uint32_t width, const uint32_t height)
-		: width_(width),
-		  height_(height),
+		: fixed_canvas(width, height),
 		  texture_(create_texture(width, height)),
 		  program_(create_shader())
 	{
@@ -119,11 +118,6 @@ namespace gameoverlay::opengl
 		}
 	}
 
-	dimensions canvas::get_dimensions() const
-	{
-		return {this->width_, this->height_};
-	}
-
 	void canvas::paint(const void* image)
 	{
 		GLint texture2d;
@@ -131,7 +125,8 @@ namespace gameoverlay::opengl
 		auto _1 = utils::finally([&texture2d] { glBindTexture(GL_TEXTURE_2D, texture2d); });
 
 		glBindTexture(GL_TEXTURE_2D, this->texture_);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, static_cast<GLsizei>(this->width_), static_cast<GLsizei>(this->height_),
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, static_cast<GLsizei>(this->get_width()),
+		                static_cast<GLsizei>(this->get_height()),
 		                GL_RGBA, GL_UNSIGNED_BYTE, image);
 	}
 
