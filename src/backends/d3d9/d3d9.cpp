@@ -1,78 +1,32 @@
 #include "std_include.hpp"
+
 #include "../../utils/hook.hpp"
 #include "../../gameoverlay.hpp"
-#include "../../utils/concurrency.hpp"
-#include <d3d9.h>
-#include <atlbase.h>
+#include "../../utils/concurrent_map.hpp"
 
-#include <shared_mutex>
-
-#pragma comment(lib, "d3d9.lib")
+#include "d3d9_renderer.hpp"
 
 namespace gameoverlay::d3d9
 {
 	namespace
 	{
-		class renderer
-		{
-		public:
-			void draw_frame()
-			{
-			}
-		};
-
-		using shared_lock_t = std::shared_lock<std::shared_mutex>;
-		using renderer_map = std::unordered_map<IDirect3DDevice9*, std::unique_ptr<renderer>>;
-		utils::concurrency::container<renderer_map, std::shared_mutex> renderers{};
+		utils::concurrency::map<IDirect3DDevice9*, std::unique_ptr<renderer>> renderers{};
 
 		utils::hook::detour device_reset_hook;
 		utils::hook::detour device_release_hook;
 		utils::hook::detour device_present_hook;
 		utils::hook::detour swap_chain_present_hook;
 
-		bool try_access_renderer(IDirect3DDevice9* device, const std::function<void(renderer&)>& callback = {})
-		{
-			return renderers.access<bool, shared_lock_t>([device, &callback](const renderer_map& r)
-			{
-				const auto entry = r.find(device);
-				if (entry != r.end())
-				{
-					if (callback)
-					{
-						callback(*entry->second);
-					}
-					return true;
-				}
-
-				return false;
-			});
-		}
-
-		void access_renderer(IDirect3DDevice9* device, const std::function<void(renderer&)>& callback)
-		{
-			if (try_access_renderer(device, callback))
-			{
-				return;
-			}
-
-			renderers.access([device](renderer_map& r)
-			{
-				r[device] = std::make_unique<renderer>();
-			});
-
-			if (!try_access_renderer(device, callback))
-			{
-				throw std::runtime_error("WAT?");
-			}
-		}
-
 		void draw_frame(IDirect3DDevice9* device)
 		{
 			if (!device) return;
 
-			access_renderer(device, [](renderer& renderer)
+			renderers.access(device, [](const std::unique_ptr<renderer>& renderer)
 			{
-				renderer.draw_frame();
+				renderer->draw_frame();
+			}, [device]
+			{
+				return std::make_unique<renderer>(device);
 			});
 		}
 
@@ -101,14 +55,7 @@ namespace gameoverlay::d3d9
 		{
 			if (get_device_ref_count(device) == 1)
 			{
-				renderers.access([device](renderer_map& r)
-				{
-					const auto entry = r.find(device);
-					if (entry != r.end())
-					{
-						r.erase(entry);
-					}
-				});
+				renderers.remove(device);
 			}
 
 			return release_device(device);
@@ -127,7 +74,7 @@ namespace gameoverlay::d3d9
 		                                       const HWND dest_window_override, const RGNDATA* dirty_region,
 		                                       const DWORD flags)
 		{
-			CComPtr<IDirect3DDevice9> device;
+			CComPtr<IDirect3DDevice9> device{};
 			swap_chain->GetDevice(&device);
 
 			draw_frame(device);
@@ -139,7 +86,7 @@ namespace gameoverlay::d3d9
 
 	void initialize()
 	{
-		const CComPtr<IDirect3D9> direct3d = Direct3DCreate9(D3D_SDK_VERSION);
+		const CComPtr direct3d = Direct3DCreate9(D3D_SDK_VERSION);
 		if (!direct3d) return;
 
 		D3DPRESENT_PARAMETERS pres_params{};

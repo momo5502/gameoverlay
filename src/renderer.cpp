@@ -17,6 +17,9 @@ struct pixel
 
 void renderer::on_frame(canvas& canvas)
 {
+	static int i = 0;
+	++i;
+
 	const auto dimensions = canvas.get_dimensions();
 	std::unique_ptr<pixel[]> buffer(new pixel[dimensions.height * dimensions.width]);
 	for (auto y = 0u; y < dimensions.height; ++y)
@@ -24,10 +27,10 @@ void renderer::on_frame(canvas& canvas)
 		for (auto x = 0u; x < dimensions.width; ++x)
 		{
 			auto& p = buffer[y * dimensions.width + x];
-			p.a = static_cast<uint8_t>(rand());
-			p.r = static_cast<uint8_t>(rand());
-			p.g = static_cast<uint8_t>(rand());
-			p.b = static_cast<uint8_t>(rand());
+			p.a = static_cast<uint8_t>(i + y * dimensions.width + x + 0);
+			p.r = static_cast<uint8_t>(i + y * dimensions.width + x + 1);
+			p.g = static_cast<uint8_t>(i + y * dimensions.width + x + 2);
+			p.b = static_cast<uint8_t>(i + y * dimensions.width + x + 3);
 		}
 	}
 

@@ -1,81 +1,32 @@
 #include "std_include.hpp"
+
 #include "../../utils/hook.hpp"
+#include "../../utils/finally.hpp"
+#include "../../utils/concurrent_map.hpp"
+
 #include "../../gameoverlay.hpp"
-#include "../../utils/concurrency.hpp"
+
 #include "opengl_renderer.hpp"
 
-#include <shared_mutex>
 
 namespace gameoverlay::opengl
 {
 	namespace
 	{
-		using shared_lock_t = std::shared_lock<std::shared_mutex>;
-		using renderer_map = std::unordered_map<HDC, std::unique_ptr<renderer>>;
-		utils::concurrency::container<renderer_map, std::shared_mutex> renderers{};
+		utils::concurrency::map<HDC, std::unique_ptr<renderer>> renderers{};
 
 		utils::hook::detour swap_buffers_hook;
 		utils::hook::detour delete_dc_hook;
 		utils::hook::detour destroy_window_hook;
 
-		bool try_access_renderer(const HDC hdc, const std::function<void(renderer&)>& callback = {})
-		{
-			return renderers.access<bool, shared_lock_t>([hdc, &callback](const renderer_map& r)
-			{
-				const auto entry = r.find(hdc);
-				if (entry != r.end())
-				{
-					if (callback)
-					{
-						callback(*entry->second);
-					}
-					return true;
-				}
-
-				return false;
-			});
-		}
-
-		bool has_renderer(const HWND window)
-		{
-			return renderers.access<bool, shared_lock_t>([window](const renderer_map& r)
-			{
-				for (auto i = r.begin(); i != r.end(); ++i)
-				{
-					const auto entry_window = WindowFromDC(i->first);
-					if (entry_window == window)
-					{
-						return true;
-					}
-				}
-
-				return false;
-			});
-		}
-
-		void access_renderer(const HDC hdc, const std::function<void(renderer&)>& callback)
-		{
-			if (try_access_renderer(hdc, callback))
-			{
-				return;
-			}
-
-			renderers.access([hdc](renderer_map& r)
-			{
-				r[hdc] = std::make_unique<renderer>(hdc);
-			});
-
-			if (!try_access_renderer(hdc, callback))
-			{
-				throw std::runtime_error("WAT?");
-			}
-		}
-
 		void draw_frame(const HDC hdc)
 		{
-			access_renderer(hdc, [](renderer& renderer)
+			renderers.access(hdc, [](const std::unique_ptr<renderer>& renderer)
 			{
-				renderer.draw_frame();
+				renderer->draw_frame();
+			}, [hdc]
+			{
+				return std::make_unique<renderer>(hdc);
 			});
 		}
 
@@ -87,41 +38,16 @@ namespace gameoverlay::opengl
 
 		BOOL WINAPI delete_dc_stub(const HDC hdc)
 		{
-			if (try_access_renderer(hdc))
-			{
-				renderers.access([hdc](renderer_map& r)
-				{
-					const auto entry = r.find(hdc);
-					if (entry != r.end())
-					{
-						r.erase(entry);
-					}
-				});
-			}
-
+			renderers.remove(hdc);
 			return delete_dc_hook.invoke_stdcall<BOOL>(hdc);
 		}
 
-		BOOL WINAPI destroy_window_stub(HWND window)
+		BOOL WINAPI destroy_window_stub(const HWND window)
 		{
-			if (has_renderer(window))
-			{
-				renderers.access([window](renderer_map& r)
-				{
-					for (auto i = r.begin(); i != r.end();)
-					{
-						const auto entry_window = WindowFromDC(i->first);
-						if (entry_window == window)
-						{
-							i = r.erase(i);
-						}
-						else
-						{
-							++i;
-						}
-					}
-				});
-			}
+			const auto dc = GetDC(window);
+			const auto _ = utils::finally([&] { ReleaseDC(window, dc); });
+
+			renderers.remove(dc);
 
 			return destroy_window_hook.invoke_stdcall<BOOL>(window);
 		}

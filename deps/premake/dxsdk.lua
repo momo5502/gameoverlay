@@ -3,7 +3,7 @@ dxsdk = {
 }
 
 function dxsdk.import()
-	filter "platforms:*32"
+	filter "platforms:*32 or platforms:*86"
 		libdirs { path.join(dxsdk.source, "Lib/x86") }
 		
 	filter "platforms:*64"
