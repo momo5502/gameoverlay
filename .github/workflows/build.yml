@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+    types: [opened, synchronize, reopened]
+jobs:
+  build:
+    name: Build binaries
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration:
+          - Debug
+          - Release
+        arch:
+          - x86
+          - x64
+        include:
+          - arch: x86
+            platform: Win32
+          - arch: x64
+            platform: x64
+    steps:
+      - name: Check out files
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+          fetch-depth: 0
+          # NOTE - If LFS ever starts getting used during builds, switch this to true!
+          lfs: false
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
+
+      - name: Generate project files
+        run: tools/premake5 vs2022
+
+      - name: Set up problem matching
+        uses: ammaraskar/msvc-problem-matcher@master
+
+      - name: Build ${{matrix.configuration}} ${{matrix.arch}} binaries
+        run: msbuild /m /v:minimal /p:Configuration=${{matrix.configuration}} /p:Platform=${{matrix.platform}} build/gameoverlay.sln
+
+      - name: Upload ${{matrix.configuration}} ${{matrix.arch}} binaries
+        uses: actions/upload-artifact@v2
+        with:
+          name: Windows ${{matrix.configuration}} ${{matrix.arch}} binaries
+          path: |
+            build/bin/${{matrix.arch}}/${{matrix.configuration}}/gameoverlay.dll
+            build/bin/${{matrix.arch}}/${{matrix.configuration}}/gameoverlay.pdb
