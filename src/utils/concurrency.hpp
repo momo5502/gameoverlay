@@ -8,17 +8,17 @@ namespace utils::concurrency
 	class container
 	{
 	public:
-		template <typename R = void, typename F>
+		template <typename R = void, typename L = std::lock_guard<MutexType>, typename F>
 		R access(F&& accessor) const
 		{
-			std::lock_guard<MutexType> _{mutex_};
+			L _{mutex_};
 			return accessor(object_);
 		}
 
-		template <typename R = void, typename F>
+		template <typename R = void, typename L = std::lock_guard<MutexType>, typename F>
 		R access(F&& accessor)
 		{
-			std::lock_guard<MutexType> _{mutex_};
+			L _{mutex_};
 			return accessor(object_);
 		}
 

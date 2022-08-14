@@ -4,3 +4,6 @@
 [submodule "deps/glew"]
 	path = deps/glew
 	url = https://github.com/Perlmint/glew-cmake.git
+[submodule "deps/dxsdk"]
+	path = deps/dxsdk
+	url = https://github.com/devKlausS/dxsdk.git

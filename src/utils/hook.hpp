@@ -1,6 +1,14 @@
 #pragma once
 #include <vector>
 
+#ifndef STDCALL
+#if defined(_WIN32) && !defined(_WIN64)
+#define STDCALL __stdcall
+#else
+#define STDCALL
+#endif
+#endif
+
 namespace utils::hook
 {
 	namespace detail
@@ -52,6 +60,30 @@ namespace utils::hook
 		return &obj_v_table[index];
 	}
 
+#if defined(_WIN32) && !defined(_WIN64)
+	// Same as above, but 'safely' works on x86 __stdcall :D
+	template <size_t Entries = 100, typename Class, typename T, typename... Args>
+	void** get_vtable_entry(Class* obj, T (__stdcall Class::* entry)(Args ...))
+	{
+		union
+		{
+			decltype(entry) func;
+			void* pointer;
+		};
+
+		func = entry;
+
+		auto iota_functions = detail::get_iota_functions<Entries>();
+		auto* object = iota_functions.data();
+
+		using fake_func = size_t(__cdecl*)(void* self);
+		auto index = static_cast<fake_func>(pointer)(&object);
+
+		void** obj_v_table = *reinterpret_cast<void***>(obj);
+		return &obj_v_table[index];
+	}
+#endif
+
 	class detour
 	{
 	public:
@@ -101,6 +133,12 @@ namespace utils::hook
 		T invoke(Args ... args)
 		{
 			return static_cast<T(*)(Args ...)>(this->get_original())(args...);
+		}
+
+		template <typename T = void, typename... Args>
+		T invoke_stdcall(Args ... args)
+		{
+			return static_cast<T(STDCALL*)(Args ...)>(this->get_original())(args...);
 		}
 
 		[[nodiscard]] void* get_original() const;

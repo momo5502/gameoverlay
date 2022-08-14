@@ -40,17 +40,15 @@ namespace gameoverlay::opengl
 			auto* v_shader_src =
 				"void main(void)"
 				"{"
-				//"	gl_TexCoord[0] = gl_MultiTexCoord0;"
+				"	gl_TexCoord[0] = gl_MultiTexCoord0;"
 				"	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;"
-				//"	gl_Position = vec4(0.0,0.0,0.0,1.0);"
 				"}";
 
 			auto* f_shader_src =
 				"uniform sampler2D tex_sampler;"
 				"void main(void)"
 				"{"
-				//"	gl_FragColor = texture2D(tex_sampler,gl_TexCoord[0].st);"
-			"gl_FragColor.r = 1.0;gl_FragColor.g = 0.0;gl_FragColor.b = 0.5;gl_FragColor.a = 1.0;"
+				"	gl_FragColor = texture2D(tex_sampler,gl_TexCoord[0].st);"
 				"}";
 
 			glShaderSource(v_shader, 1, &v_shader_src, nullptr);
