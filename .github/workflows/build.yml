@@ -30,12 +30,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        configuration:
-          - Debug
-          - Release
         architecture:
           - x86
           - x64
+        configuration:
+          - Debug
+          - Release
         include:
           - configuration: Debug
             preset: debug
@@ -59,3 +59,17 @@ jobs:
 
       - name: CMake Build
         run: cmake --workflow --preset=${{matrix.preset}}
+
+  summary:
+    name: Pipeline Summary
+    runs-on: ubuntu-24.04
+    needs: [build, verify-formatting]
+    if: always()
+    steps:
+      - uses: geekyeggo/delete-artifact@v5
+        with:
+          name: 'Temp *'
+
+      - name: Pipeline failed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1
