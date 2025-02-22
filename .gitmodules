@@ -1,9 +1,20 @@
-[submodule "deps/minhook"]
-	path = deps/minhook
-	url = https://github.com/TsudaKageyu/minhook.git
-[submodule "deps/glew"]
-	path = deps/glew
-	url = https://github.com/Perlmint/glew-cmake.git
-[submodule "deps/dxsdk"]
-	path = deps/dxsdk
-	url = https://github.com/devKlausS/dxsdk.git
+[submodule "deps/unicorn"]
+	path = deps/unicorn
+	url = ../unicorn.git
+	shallow = true
+	branch = dev
+[submodule "deps/reflect"]
+	path = deps/reflect
+	url = https://github.com/qlibs/reflect.git
+	shallow = true
+[submodule "deps/googletest"]
+	path = deps/googletest
+	url = https://github.com/google/googletest.git
+[submodule "deps/zlib"]
+	path = deps/zlib
+	url = https://github.com/madler/zlib.git
+	branch = develop
+	ignore = dirty
+[submodule "deps/gtest-parallel"]
+	path = deps/gtest-parallel
+	url = https://github.com/google/gtest-parallel.git
