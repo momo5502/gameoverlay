@@ -1,5 +1,7 @@
 #pragma once
+
 #include <cstdint>
+#include <utils/class_helper.hpp>
 
 struct dimensions
 {
@@ -19,30 +21,19 @@ struct dimensions
 
 class canvas
 {
+    CLASS_DECLARE_INTERFACE(canvas);
+
   public:
-    canvas() = default;
-
-    canvas(canvas&&) = delete;
-    canvas(const canvas&) = delete;
-    canvas& operator=(canvas&&) = delete;
-    canvas& operator=(const canvas&) = delete;
-
-    virtual ~canvas() = default;
     virtual dimensions get_dimensions() const = 0;
     virtual void paint(const void* image) = 0;
 
-    uint32_t get_width() const;
-    uint32_t get_height() const;
-};
+    uint32_t get_width() const
+    {
+        return this->get_dimensions().width;
+    }
 
-class fixed_canvas : public canvas
-{
-  public:
-    fixed_canvas(uint32_t width, uint32_t height);
-
-    dimensions get_dimensions() const override;
-
-  private:
-    uint32_t width_{};
-    uint32_t height_{};
+    uint32_t get_height() const
+    {
+        return this->get_dimensions().height;
+    }
 };

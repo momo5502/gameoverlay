@@ -1,60 +1,64 @@
 #pragma once
 #include "canvas.hpp"
-#include <utils/win.hpp>
+#include "backend.hpp"
 
-enum class backend_type
+#include <functional>
+
+namespace gameoverlay
 {
-    d3d8,
-    d3d9,
-    d3d10,
-    d3d11,
-    d3d12,
-    opengl,
-    vulkan,
-};
+    using frame_handler = std::function<void(canvas& canvas)>;
 
-class renderer
-{
-  public:
-    renderer() = default;
-
-    renderer(renderer&&) = delete;
-    renderer(const renderer&) = delete;
-    renderer& operator=(renderer&&) = delete;
-    renderer& operator=(const renderer&) = delete;
-
-    virtual ~renderer() = default;
-    virtual backend_type get_backend_type() const = 0;
-    virtual HWND get_window() const = 0;
-
-  protected:
-    void on_frame(canvas& canvas);
-};
-
-template <backend_type Type>
-class typed_renderer : public renderer
-{
-  public:
-    backend_type get_backend_type() const override
+    class renderer
     {
-        return Type;
-    }
-};
+      public:
+        CLASS_DECLARE_INTERFACE(renderer);
 
-template <backend_type Type>
-class window_renderer : public typed_renderer<Type>
-{
-  public:
-    window_renderer(const HWND window)
-        : window_(window)
+        virtual backend::type get_backend_type() const = 0;
+        virtual HWND get_window() const = 0;
+
+        void on_frame(frame_handler handler)
+        {
+            this->handler_ = std::move(handler);
+        }
+
+      protected:
+        void handle_new_frame(canvas& c) const
+        {
+            if (this->handler_)
+            {
+                this->handler_(c);
+            }
+        }
+
+      private:
+        frame_handler handler_{};
+    };
+
+    template <backend::type Type>
+    class typed_renderer : public renderer
     {
-    }
+      public:
+        backend::type get_backend_type() const override
+        {
+            return Type;
+        }
+    };
 
-    HWND get_window() const override
+    template <backend::type Type>
+    class window_renderer : public typed_renderer<Type>
     {
-        return this->window_;
-    }
+      public:
+        window_renderer(const HWND window)
+            : window_(window)
+        {
+        }
 
-  private:
-    HWND window_{};
-};
+        HWND get_window() const override
+        {
+            return this->window_;
+        }
+
+      private:
+        HWND window_{};
+    };
+}
