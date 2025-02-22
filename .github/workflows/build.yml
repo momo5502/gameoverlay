@@ -33,6 +33,9 @@ jobs:
         configuration:
           - Debug
           - Release
+        architecture:
+          - x86
+          - x64
         include:
           - configuration: Debug
             preset: debug
@@ -48,6 +51,8 @@ jobs:
           
       - name: Enable Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1.13.0
+        with:
+          arch: ${{matrix.architecture}}
 
       - name: Set up problem matching
         uses: ammaraskar/msvc-problem-matcher@master
