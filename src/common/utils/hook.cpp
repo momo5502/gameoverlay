@@ -480,7 +480,7 @@ namespace utils::hook
             return;
         }
 
-        auto* patch_pointer = PBYTE(pointer);
+        auto* patch_pointer = static_cast<PBYTE>(pointer);
 
         if (use_far)
         {
@@ -505,7 +505,8 @@ namespace utils::hook
         {
             uint8_t copy_data[5];
             copy_data[0] = 0xE9;
-            *reinterpret_cast<int32_t*>(&copy_data[1]) = int32_t(size_t(data) - (size_t(pointer) + 5));
+            *reinterpret_cast<int32_t*>(&copy_data[1]) =
+                static_cast<int32_t>(reinterpret_cast<size_t>(data) - (reinterpret_cast<size_t>(pointer) + 5));
 
             copy(patch_pointer, copy_data, sizeof(copy_data));
         }
@@ -540,7 +541,7 @@ namespace utils::hook
     }
 #endif
 
-    void inject(size_t pointer, size_t data)
+    void inject(const size_t pointer, const size_t data)
     {
         if (is_relatively_far(pointer, data, 4))
         {
