@@ -1,55 +1,68 @@
 #pragma once
 #include "canvas.hpp"
-#include "backend.hpp"
+#include "backend_type.hpp"
 
-#include <functional>
+#include <memory>
+#include <utils/win.hpp>
 
 namespace gameoverlay
 {
-    using frame_handler = std::function<void(canvas& canvas)>;
-
     class renderer
     {
       public:
-        CLASS_DECLARE_INTERFACE(renderer);
-
-        virtual backend::type get_backend_type() const = 0;
-        virtual HWND get_window() const = 0;
-
-        void on_frame(frame_handler handler)
+        struct handler
         {
-            this->handler_ = std::move(handler);
+            CLASS_DECLARE_INTERFACE(handler);
+
+            virtual void on_frame(const renderer& r, canvas& c)
+            {
+                (void)r;
+                (void)c;
+            }
+        };
+
+        using owned_handler = std::unique_ptr<handler>;
+        renderer(owned_handler h)
+            : handler_(std::move(h))
+        {
         }
+
+        CLASS_DISABLE_COPY_AND_MOVE(renderer);
+
+        virtual ~renderer() = default;
+
+        virtual backend_type get_backend_type() const = 0;
+        virtual HWND get_window() const = 0;
 
       protected:
         void handle_new_frame(canvas& c) const
         {
-            if (this->handler_)
-            {
-                this->handler_(c);
-            }
+            this->handler_->on_frame(*this, c);
         }
 
       private:
-        frame_handler handler_{};
+        owned_handler handler_{};
     };
 
-    template <backend::type Type>
+    template <backend_type Type>
     class typed_renderer : public renderer
     {
       public:
-        backend::type get_backend_type() const override
+        using renderer::renderer;
+
+        backend_type get_backend_type() const override
         {
             return Type;
         }
     };
 
-    template <backend::type Type>
+    template <backend_type Type>
     class window_renderer : public typed_renderer<Type>
     {
       public:
-        window_renderer(const HWND window)
-            : window_(window)
+        window_renderer(renderer::owned_handler h, const HWND window)
+            : typed_renderer<Type>(std::move(h)),
+              window_(window)
         {
         }
 

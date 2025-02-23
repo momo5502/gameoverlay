@@ -8,7 +8,7 @@
 
 namespace gameoverlay::opengl
 {
-    class renderer : public window_renderer<backend::type::opengl>
+    class renderer : public window_renderer<backend_type::opengl>
     {
       public:
         renderer(HDC hdc);

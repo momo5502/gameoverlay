@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+#include <cstddef>
 #include <cstdint>
 #include <utils/class_helper.hpp>
 
@@ -26,7 +28,7 @@ class canvas
 
   public:
     virtual dimensions get_dimensions() const = 0;
-    virtual void paint(const void* image) = 0;
+    virtual void paint(std::span<const uint8_t> image) = 0;
 
     uint32_t get_width() const
     {
@@ -36,6 +38,12 @@ class canvas
     uint32_t get_height() const
     {
         return this->get_dimensions().height;
+    }
+
+    size_t get_buffer_size() const
+    {
+        const auto dim = this->get_dimensions();
+        return static_cast<size_t>(4) * dim.width * dim.height;
     }
 };
 

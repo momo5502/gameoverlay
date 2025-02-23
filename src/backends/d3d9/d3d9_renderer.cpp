@@ -26,25 +26,25 @@ namespace gameoverlay::d3d9
         }
     }
 
-    renderer::renderer(IDirect3DDevice9& device)
-        : window_renderer(get_device_window(device)),
+    d3d9_renderer::d3d9_renderer(owned_handler h, IDirect3DDevice9& device)
+        : window_renderer(std::move(h), get_device_window(device)),
           device_(&device)
     {
     }
 
-    void renderer::draw_frame()
+    void d3d9_renderer::draw_frame()
     {
         const auto current_dim = get_device_dimensions(*this->device_);
         if (!this->canvas_ || this->canvas_->get_dimensions() != current_dim)
         {
-            this->canvas_ = std::make_unique<canvas>(this->device_, current_dim.width, current_dim.height);
+            this->canvas_ = std::make_unique<d3d9_canvas>(this->device_, current_dim.width, current_dim.height);
         }
 
         this->handle_new_frame(*this->canvas_);
         this->canvas_->draw();
     }
 
-    void renderer::reset()
+    void d3d9_renderer::reset()
     {
         this->canvas_ = {};
     }

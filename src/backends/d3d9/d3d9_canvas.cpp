@@ -7,7 +7,7 @@
 
 namespace gameoverlay::d3d9
 {
-    canvas::canvas(IDirect3DDevice9* device, const uint32_t width, const uint32_t height)
+    d3d9_canvas::d3d9_canvas(IDirect3DDevice9* device, const uint32_t width, const uint32_t height)
         : fixed_canvas(width, height),
           device_(device)
     {
@@ -23,7 +23,7 @@ namespace gameoverlay::d3d9
         }
     }
 
-    void canvas::paint(const void* image)
+    void d3d9_canvas::paint(std::span<const uint8_t> image)
     {
         D3DSURFACE_DESC desc{};
         this->texture_->GetLevelDesc(0, &desc);
@@ -33,7 +33,7 @@ namespace gameoverlay::d3d9
             return;
         }
 
-        D3DLOCKED_RECT locked_rect;
+        D3DLOCKED_RECT locked_rect{};
         if (FAILED(this->texture_->LockRect(0, &locked_rect, NULL, 0)))
         {
             return;
@@ -44,12 +44,17 @@ namespace gameoverlay::d3d9
         });
 
         const auto bytes_per_pixel = static_cast<uint32_t>(locked_rect.Pitch) / this->get_width();
-        assert(bytes_per_pixel == 4);
 
-        memcpy(locked_rect.pBits, image, this->get_width() * this->get_height() * bytes_per_pixel);
+        if (bytes_per_pixel != 4)
+        {
+            assert(false && "Bad bytes_per_pixel value!");
+            return;
+        }
+
+        memcpy(locked_rect.pBits, image.data(), std::min(image.size(), this->get_buffer_size()));
     }
 
-    void canvas::draw() const
+    void d3d9_canvas::draw() const
     {
         this->device_->BeginScene();
 

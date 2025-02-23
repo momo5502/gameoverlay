@@ -1,7 +1,7 @@
 #include "overlay.hpp"
 
 #include <list>
-#include <d3d9_backend.hpp>
+#include <backend_d3d9.hpp>
 
 namespace gameoverlay
 {
@@ -13,7 +13,46 @@ namespace gameoverlay
 
             overlay()
             {
-                backends.emplace_back(d3d9::create_backend());
+                backends.emplace_back(d3d9::create_backend(this->make_handler()));
+            }
+
+            backend::owned_handler make_handler()
+            {
+                struct overlay_renderer_handler : renderer::handler
+                {
+                    std::vector<uint8_t> data{};
+
+                    void on_frame(const renderer&, canvas& c) override
+                    {
+                        const auto needed_size = c.get_buffer_size();
+                        if (this->data.size() != needed_size)
+                        {
+                            this->data.resize(needed_size, 0xFF);
+
+                            for (auto& b : this->data)
+                            {
+                                b = static_cast<uint8_t>(rand());
+                            }
+                        }
+
+                        c.paint(this->data);
+                    }
+                };
+
+                struct overlay_backend_handler : backend::handler
+                {
+                    std::unique_ptr<renderer::handler> create_renderer_handler() override
+                    {
+                        return std::make_unique<overlay_renderer_handler>();
+                    }
+
+                    void on_new_renderer(renderer&) override
+                    {
+                        OutputDebugStringA("New renderer!");
+                    }
+                };
+
+                return std::make_unique<overlay_backend_handler>();
             }
         };
     }

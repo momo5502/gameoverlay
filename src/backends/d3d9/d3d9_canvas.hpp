@@ -5,13 +5,13 @@
 
 namespace gameoverlay::d3d9
 {
-    class canvas : public fixed_canvas
+    class d3d9_canvas : public fixed_canvas
     {
       public:
-        canvas(IDirect3DDevice9* device, uint32_t width, uint32_t height);
-        ~canvas() override = default;
+        d3d9_canvas(IDirect3DDevice9* device, uint32_t width, uint32_t height);
+        ~d3d9_canvas() override = default;
 
-        void paint(const void* image) override;
+        void paint(std::span<const uint8_t> image) override;
 
         void draw() const;
 

@@ -5,5 +5,5 @@
 
 namespace gameoverlay::d3d9
 {
-    std::unique_ptr<backend> create_backend();
+    std::unique_ptr<backend> create_backend(backend::owned_handler h);
 }
