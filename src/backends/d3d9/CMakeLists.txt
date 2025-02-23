@@ -18,3 +18,7 @@ target_link_libraries(backend-d3d9 PUBLIC
 target_link_libraries(backend-d3d9 PRIVATE
   dxsdk
 )
+
+target_include_directories(backend-d3d9 PUBLIC
+    "${CMAKE_CURRENT_LIST_DIR}/include"
+)

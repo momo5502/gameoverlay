@@ -1,7 +1,8 @@
-#include <utils/hook.hpp>
-
+#include "d3d9_backend.hpp"
 #include "d3d9_renderer.hpp"
-#include "utils/concurrency.hpp"
+
+#include <utils/hook.hpp>
+#include <utils/concurrency.hpp>
 
 namespace gameoverlay::d3d9
 {
@@ -103,13 +104,15 @@ namespace gameoverlay::d3d9
                                                                           dest_window_override, dirty_region, flags);
         }
 
-        class backend : public ::gameoverlay::backend
+        struct d3d9_backend : public typed_backed<backend::type::d3d9>
         {
-            void initialize() override
+            d3d9_backend()
             {
                 const CComPtr direct3d = Direct3DCreate9(D3D_SDK_VERSION);
                 if (!direct3d)
+                {
                     return;
+                }
 
                 D3DPRESENT_PARAMETERS pres_params{};
                 ZeroMemory(&pres_params, sizeof(pres_params));
@@ -130,20 +133,22 @@ namespace gameoverlay::d3d9
                 CComPtr<IDirect3DSwapChain9> swap_chain{};
                 device->GetSwapChain(0, &swap_chain);
 
+                auto& h = get_hooks();
+
                 auto* device_release = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Release);
-                get_hooks().device_release.create(device_release, device_release_stub);
+                h.device_release.create(device_release, device_release_stub);
 
                 auto* device_present = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Present);
-                get_hooks().device_present.create(device_present, device_present_stub);
+                h.device_present.create(device_present, device_present_stub);
 
                 auto* device_reset = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Reset);
-                get_hooks().device_reset.create(device_reset, device_reset_stub);
+                h.device_reset.create(device_reset, device_reset_stub);
 
                 if (swap_chain)
                 {
                     auto* swap_chain_present =
                         *utils::hook::get_vtable_entry(&*swap_chain, &IDirect3DSwapChain9::Present);
-                    get_hooks().swap_chain_present.create(swap_chain_present, swap_chain_present_stub);
+                    h.swap_chain_present.create(swap_chain_present, swap_chain_present_stub);
                 }
             }
 
@@ -157,6 +162,9 @@ namespace gameoverlay::d3d9
             }
         };
     }
-}
 
-// REGISTER_BACKEND(gameoverlay::d3d9::backend);
+    std::unique_ptr<backend> create_backend()
+    {
+        return std::make_unique<d3d9_backend>();
+    }
+}

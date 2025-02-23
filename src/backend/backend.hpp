@@ -22,10 +22,6 @@ namespace gameoverlay
 
         virtual type get_type() const = 0;
 
-        virtual void initialize()
-        {
-        }
-
         virtual void on_window_destruction(const HWND window)
         {
             (void)window;

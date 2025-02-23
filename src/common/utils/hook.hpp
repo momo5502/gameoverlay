@@ -55,7 +55,7 @@ namespace utils::hook
 
     // Gets the pointer to the entry in the v-table.
     // It seems otherwise impossible to get this.
-    // This is ugly as fuck and only safely works on x64
+    // This is ugly as fuck.
     // Example:
     //   ID3D11Device* device = ...
     //   auto entry = get_vtable_entry(device, &ID3D11Device::CreateTexture2D);
