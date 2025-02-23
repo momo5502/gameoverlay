@@ -21,6 +21,7 @@ struct dimensions
 
 class canvas
 {
+  protected:
     CLASS_DECLARE_INTERFACE(canvas);
 
   public:
@@ -36,4 +37,30 @@ class canvas
     {
         return this->get_dimensions().height;
     }
+};
+
+struct fixed_canvas : canvas
+{
+  protected:
+    fixed_canvas(const dimensions dim)
+        : dimensions_(dim)
+    {
+    }
+
+    fixed_canvas(const uint32_t width, const uint32_t height)
+        : fixed_canvas({
+              .width = width,
+              .height = height,
+          })
+    {
+    }
+
+  public:
+    dimensions get_dimensions() const override
+    {
+        return this->dimensions_;
+    }
+
+  private:
+    dimensions dimensions_{};
 };

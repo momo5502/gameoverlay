@@ -14,3 +14,7 @@ target_link_libraries(backend-d3d9 PUBLIC
   common
   backend
 )
+
+target_link_libraries(backend-d3d9 PRIVATE
+  dxsdk
+)

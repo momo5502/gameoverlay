@@ -14,3 +14,7 @@ target_link_libraries(backend-opengl PUBLIC
   common
   backend
 )
+
+target_link_libraries(backend-opengl PRIVATE
+ libglew_static
+)
