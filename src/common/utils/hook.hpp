@@ -18,13 +18,13 @@ namespace utils::hook
 {
     namespace detail
     {
+#if defined(_WIN64)
         template <size_t Entries>
         std::vector<size_t (*)()> get_iota_functions()
         {
             if constexpr (Entries == 0)
             {
-                std::vector<size_t (*)()> functions;
-                return functions;
+                return {};
             }
             else
             {
@@ -33,6 +33,24 @@ namespace utils::hook
                 return functions;
             }
         }
+#else
+        template <size_t Entries, typename Class, typename... Args>
+        std::vector<size_t(__stdcall*)(Class*, Args...)> get_stdcall_iota_functions()
+        {
+            if constexpr (Entries == 0)
+            {
+                return {};
+            }
+            else
+            {
+                auto functions = get_stdcall_iota_functions<Entries - 1, Class, Args...>();
+                functions.emplace_back(static_cast<size_t(__stdcall*)(Class*, Args...)>([](Class*, Args...) {
+                    return Entries - 1; //
+                }));
+                return functions;
+            }
+        }
+#endif
     }
 
     // Gets the pointer to the entry in the v-table.
@@ -42,7 +60,8 @@ namespace utils::hook
     //   ID3D11Device* device = ...
     //   auto entry = get_vtable_entry(device, &ID3D11Device::CreateTexture2D);
     template <size_t Entries = 100, typename Class, typename T, typename... Args>
-    void** get_vtable_entry(Class* obj, T (Class::*entry)(Args...))
+#if defined(_WIN64)
+    void** get_vtable_entry(Class* obj, T (__thiscall Class::*entry)(Args...))
     {
         union
         {
@@ -61,6 +80,29 @@ namespace utils::hook
         void** obj_v_table = *reinterpret_cast<void***>(obj);
         return &obj_v_table[index];
     }
+#else
+    void** get_vtable_entry(Class* obj, T (__stdcall Class::*entry)(Args...))
+    {
+        using fake_func = size_t(__stdcall*)(Class*, Args...);
+
+        union
+        {
+            decltype(entry) func;
+            fake_func ffunc;
+            void* pointer;
+        };
+
+        func = entry;
+
+        auto iota_functions = detail::get_stdcall_iota_functions<Entries, Class, Args...>();
+        auto* object = iota_functions.data();
+
+        auto index = ffunc(reinterpret_cast<Class*>(&object), Args()...);
+
+        void** obj_v_table = *reinterpret_cast<void***>(obj);
+        return &obj_v_table[index];
+    }
+#endif
 
 #ifdef HOOK_ENABLE_ASMJIT
     class assembler : public Assembler
