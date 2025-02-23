@@ -34,19 +34,19 @@ namespace gameoverlay::opengl
         }
     }
 
-    renderer::renderer(const HDC hdc)
-        : window_renderer(WindowFromDC(hdc)),
+    opengl_renderer::opengl_renderer(owned_handler h, const HDC hdc)
+        : window_renderer(std::move(h), WindowFromDC(hdc)),
           hdc_(hdc)
     {
         initialize_glew();
     }
 
-    void renderer::draw_frame()
+    void opengl_renderer::draw_frame()
     {
         const auto current_dim = get_dimensions(this->hdc_);
         if (!this->canvas_ || this->canvas_->get_dimensions() != current_dim)
         {
-            this->canvas_ = std::make_unique<canvas>(current_dim.width, current_dim.height);
+            this->canvas_ = std::make_unique<opengl_canvas>(current_dim.width, current_dim.height);
         }
 
         this->handle_new_frame(*this->canvas_);

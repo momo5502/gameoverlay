@@ -124,9 +124,9 @@ namespace gameoverlay
             this->create_and_access_renderer(std::move(key), [](Renderer&) {}, std::forward<Args>(args)...);
         }
 
-        template <typename Predicate>
+        template <typename Predicate = bool (*)()>
             requires(std::is_invocable_r_v<bool, Predicate>)
-        bool erase(const RendererKey& key, const Predicate& guardedPredicate = [] { return true; })
+        bool erase(const RendererKey& key, const Predicate& guardedPredicate = +[] { return true; })
         {
             return this->renderers_.template access<bool>([&](renderers& r) {
                 const auto canErase = guardedPredicate();

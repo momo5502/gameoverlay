@@ -5,13 +5,13 @@
 
 namespace gameoverlay::opengl
 {
-    class canvas : public fixed_canvas
+    class opengl_canvas : public fixed_canvas
     {
       public:
-        canvas(uint32_t width, uint32_t height);
-        ~canvas() override;
+        opengl_canvas(uint32_t width, uint32_t height);
+        ~opengl_canvas() override;
 
-        void paint(const void* image) override;
+        void paint(std::span<const uint8_t> image) override;
 
         void draw() const;
 

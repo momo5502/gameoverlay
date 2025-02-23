@@ -18,3 +18,7 @@ target_link_libraries(backend-opengl PUBLIC
 target_link_libraries(backend-opengl PRIVATE
  libglew_static
 )
+
+target_include_directories(backend-opengl PUBLIC
+    "${CMAKE_CURRENT_LIST_DIR}/include"
+)

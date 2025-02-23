@@ -1,6 +1,6 @@
 #pragma once
 
-#include "d3d9_backend.hpp"
+#include <backend.hpp>
 #include "d3d9_renderer.hpp"
 
 namespace gameoverlay::d3d9

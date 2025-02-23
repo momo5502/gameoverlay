@@ -96,14 +96,14 @@ namespace gameoverlay::opengl
         }
     }
 
-    canvas::canvas(const uint32_t width, const uint32_t height)
+    opengl_canvas::opengl_canvas(const uint32_t width, const uint32_t height)
         : fixed_canvas(width, height),
           texture_(create_texture(width, height)),
           program_(create_shader())
     {
     }
 
-    canvas::~canvas()
+    opengl_canvas::~opengl_canvas()
     {
         if (this->texture_)
         {
@@ -116,18 +116,23 @@ namespace gameoverlay::opengl
         }
     }
 
-    void canvas::paint(const void* image)
+    void opengl_canvas::paint(const std::span<const uint8_t> image)
     {
+        if (image.size() != this->get_buffer_size())
+        {
+            return;
+        }
+
         GLint texture2d;
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &texture2d);
         auto _1 = utils::finally([&texture2d] { glBindTexture(GL_TEXTURE_2D, texture2d); });
 
         glBindTexture(GL_TEXTURE_2D, this->texture_);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, static_cast<GLsizei>(this->get_width()),
-                        static_cast<GLsizei>(this->get_height()), GL_RGBA, GL_UNSIGNED_BYTE, image);
+                        static_cast<GLsizei>(this->get_height()), GL_RGBA, GL_UNSIGNED_BYTE, image.data());
     }
 
-    void canvas::draw() const
+    void opengl_canvas::draw() const
     {
         glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
         auto _1 = utils::finally([] { glPopClientAttrib(); });
