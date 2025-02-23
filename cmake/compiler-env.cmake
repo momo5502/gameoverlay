@@ -1,6 +1,11 @@
 include_guard()
 
 ##########################################
+
+include("${CMAKE_CURRENT_LIST_DIR}/target-arch.cmake")
+target_architecture(TARGET_ARCH)
+
+##########################################
 # System identification
 
 set(OSX OFF)

@@ -16,3 +16,12 @@
     cls() = default;                 \
     virtual ~cls() = default;        \
     CLASS_DISABLE_COPY_AND_MOVE(cls)
+
+namespace utils
+{
+    struct object
+    {
+        object() = default;
+        virtual ~object() = default;
+    };
+}
