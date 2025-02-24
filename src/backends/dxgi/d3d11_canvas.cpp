@@ -27,22 +27,22 @@ namespace gameoverlay::dxgi
         struct context_store
         {
             UINT ref{};
-            CComPtr<ID3D10Device> device{};
-            CComPtr<ID3D10DepthStencilState> depth_stencil_state{};
+            CComPtr<ID3D11DeviceContext> context{};
+            CComPtr<ID3D11DepthStencilState> depth_stencil_state{};
 
-            context_store(ID3D10Device& d)
-                : device(&d)
+            context_store(ID3D11DeviceContext& c)
+                : context(&c)
             {
-                this->device->OMGetDepthStencilState(&this->depth_stencil_state, &this->ref);
+                this->context->OMGetDepthStencilState(&this->depth_stencil_state, &this->ref);
             }
 
             ~context_store()
             {
-                this->device->OMSetDepthStencilState(this->depth_stencil_state, this->ref);
+                this->context->OMSetDepthStencilState(this->depth_stencil_state, this->ref);
             }
         };
 
-        CComPtr<ID3D10Effect> create_shader(ID3D10Device& device)
+        CComPtr<ID3DX11Effect> create_shader(ID3D11Device& device)
         {
             constexpr char effect_src[] = "Texture2D SpriteTex;"
                                           "SamplerState samLinear {"
@@ -70,9 +70,11 @@ namespace gameoverlay::dxgi
                                           "float4 PS(VertexOut pin) : SV_Target {"
                                           "     return pin.Color*SpriteTex.Sample(samLinear, pin.Tex);"
                                           "};"
-                                          "technique10 SpriteTech {"
+                                          "technique11 SpriteTech {"
                                           "     pass P0 {"
                                           "         SetVertexShader( CompileShader( vs_4_0, VS() ) );"
+                                          "         SetHullShader( NULL );"
+                                          "         SetDomainShader( NULL );"
                                           "         SetGeometryShader( NULL );"
                                           "         SetPixelShader( CompileShader( ps_4_0, PS() ) );"
                                           "     }"
@@ -88,9 +90,9 @@ namespace gameoverlay::dxgi
                 throw std::runtime_error("Failed to compile effect");
             }
 
-            CComPtr<ID3D10Effect> effect{};
-            res = D3D10CreateEffectFromMemory(shader_buffer->GetBufferPointer(), shader_buffer->GetBufferSize(), 0,
-                                              &device, nullptr, &effect);
+            CComPtr<ID3DX11Effect> effect{};
+            res = D3DX11CreateEffectFromMemory(shader_buffer->GetBufferPointer(), shader_buffer->GetBufferSize(), 0,
+                                               &device, &effect);
 
             if (FAILED(res) || !effect)
             {
@@ -100,15 +102,15 @@ namespace gameoverlay::dxgi
             return effect;
         }
 
-        CComPtr<ID3D10InputLayout> create_input_layout(ID3D10Device& device, const D3D10_PASS_DESC& pass_desc)
+        CComPtr<ID3D11InputLayout> create_input_layout(ID3D11Device& device, const D3DX11_PASS_DESC& pass_desc)
         {
-            D3D10_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D10_INPUT_PER_VERTEX_DATA, 0},
-                {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D10_INPUT_PER_VERTEX_DATA, 0},
-                {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 20, D3D10_INPUT_PER_VERTEX_DATA, 0},
+            D3D11_INPUT_ELEMENT_DESC layout[] = {
+                {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+                {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
             };
 
-            CComPtr<ID3D10InputLayout> input_layout{};
+            CComPtr<ID3D11InputLayout> input_layout{};
             const auto res = device.CreateInputLayout(layout, ARRAYSIZE(layout), pass_desc.pIAInputSignature,
                                                       pass_desc.IAInputSignatureSize, &input_layout);
             if (FAILED(res) || !input_layout)
@@ -119,10 +121,10 @@ namespace gameoverlay::dxgi
             return input_layout;
         }
 
-        CComPtr<ID3D10Buffer> create_buffer(ID3D10Device& device, const D3D10_BUFFER_DESC& buffer_desc,
-                                            const D3D10_SUBRESOURCE_DATA* init_data = nullptr)
+        CComPtr<ID3D11Buffer> create_buffer(ID3D11Device& device, const D3D11_BUFFER_DESC& buffer_desc,
+                                            const D3D11_SUBRESOURCE_DATA* init_data = nullptr)
         {
-            CComPtr<ID3D10Buffer> buffer{};
+            CComPtr<ID3D11Buffer> buffer{};
             const auto res = device.CreateBuffer(&buffer_desc, init_data, &buffer);
 
             if (FAILED(res) || !buffer)
@@ -133,20 +135,20 @@ namespace gameoverlay::dxgi
             return buffer;
         }
 
-        CComPtr<ID3D10Buffer> create_index_buffer(ID3D10Device& device)
+        CComPtr<ID3D11Buffer> create_index_buffer(ID3D11Device& device)
         {
             const DWORD indices[] = {
                 0, 1, 2, 0, 2, 3,
             };
 
-            D3D10_BUFFER_DESC index_buffer_desc{};
-            index_buffer_desc.Usage = D3D10_USAGE_DEFAULT;
+            D3D11_BUFFER_DESC index_buffer_desc{};
+            index_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
             index_buffer_desc.ByteWidth = sizeof(DWORD) * 2 * 3;
-            index_buffer_desc.BindFlags = D3D10_BIND_INDEX_BUFFER;
+            index_buffer_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
             index_buffer_desc.CPUAccessFlags = 0;
             index_buffer_desc.MiscFlags = 0;
 
-            D3D10_SUBRESOURCE_DATA iinit_data;
+            D3D11_SUBRESOURCE_DATA iinit_data;
             iinit_data.pSysMem = indices;
 
             auto index_buffer = create_buffer(device, index_buffer_desc, &iinit_data);
@@ -159,13 +161,13 @@ namespace gameoverlay::dxgi
             return index_buffer;
         }
 
-        CComPtr<ID3D10Buffer> create_vertex_buffer(ID3D10Device& device)
+        CComPtr<ID3D11Buffer> create_vertex_buffer(ID3D11Device& device)
         {
-            D3D10_BUFFER_DESC vertex_buffer_desc{};
-            vertex_buffer_desc.Usage = D3D10_USAGE_DYNAMIC;
+            D3D11_BUFFER_DESC vertex_buffer_desc{};
+            vertex_buffer_desc.Usage = D3D11_USAGE_DYNAMIC;
             vertex_buffer_desc.ByteWidth = sizeof(vertex) * 4;
-            vertex_buffer_desc.BindFlags = D3D10_BIND_VERTEX_BUFFER;
-            vertex_buffer_desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+            vertex_buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+            vertex_buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
             auto index_buffer = create_buffer(device, vertex_buffer_desc);
             if (!index_buffer)
@@ -176,19 +178,19 @@ namespace gameoverlay::dxgi
             return index_buffer;
         }
 
-        CComPtr<ID3D10BlendState> create_blend_state(ID3D10Device& device)
+        CComPtr<ID3D11BlendState> create_blend_state(ID3D11Device& device)
         {
-            D3D10_BLEND_DESC blend_desc{};
-            blend_desc.BlendEnable[0] = TRUE;
-            blend_desc.SrcBlend = D3D10_BLEND_SRC_ALPHA;
-            blend_desc.DestBlend = D3D10_BLEND_INV_SRC_ALPHA;
-            blend_desc.BlendOp = D3D10_BLEND_OP_ADD;
-            blend_desc.SrcBlendAlpha = D3D10_BLEND_ZERO;
-            blend_desc.DestBlendAlpha = D3D10_BLEND_ZERO;
-            blend_desc.BlendOpAlpha = D3D10_BLEND_OP_ADD;
-            blend_desc.RenderTargetWriteMask[0] = D3D10_COLOR_WRITE_ENABLE_ALL;
+            D3D11_BLEND_DESC blend_desc{};
+            blend_desc.RenderTarget[0].BlendEnable = TRUE;
+            blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+            blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+            blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+            blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
+            blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+            blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+            blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-            CComPtr<ID3D10BlendState> blend_state{};
+            CComPtr<ID3D11BlendState> blend_state{};
             const auto res = device.CreateBlendState(&blend_desc, &blend_state);
 
             if (FAILED(res) || !blend_state)
@@ -199,25 +201,25 @@ namespace gameoverlay::dxgi
             return blend_state;
         }
 
-        CComPtr<ID3D10DepthStencilState> create_depth_stencil_state(ID3D10Device& device)
+        CComPtr<ID3D11DepthStencilState> create_depth_stencil_state(ID3D11Device& device)
         {
-            D3D10_DEPTH_STENCIL_DESC depth_stencil_desc{};
+            D3D11_DEPTH_STENCIL_DESC depth_stencil_desc{};
             depth_stencil_desc.DepthEnable = false;
-            depth_stencil_desc.DepthWriteMask = D3D10_DEPTH_WRITE_MASK_ALL;
-            depth_stencil_desc.DepthFunc = D3D10_COMPARISON_LESS;
+            depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+            depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
             depth_stencil_desc.StencilEnable = true;
             depth_stencil_desc.StencilReadMask = 0xFF;
             depth_stencil_desc.StencilWriteMask = 0xFF;
-            depth_stencil_desc.FrontFace.StencilFailOp = D3D10_STENCIL_OP_KEEP;
-            depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D10_STENCIL_OP_INCR;
-            depth_stencil_desc.FrontFace.StencilPassOp = D3D10_STENCIL_OP_KEEP;
-            depth_stencil_desc.FrontFace.StencilFunc = D3D10_COMPARISON_ALWAYS;
-            depth_stencil_desc.BackFace.StencilFailOp = D3D10_STENCIL_OP_KEEP;
-            depth_stencil_desc.BackFace.StencilDepthFailOp = D3D10_STENCIL_OP_DECR;
-            depth_stencil_desc.BackFace.StencilPassOp = D3D10_STENCIL_OP_KEEP;
-            depth_stencil_desc.BackFace.StencilFunc = D3D10_COMPARISON_ALWAYS;
+            depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+            depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+            depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+            depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+            depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+            depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+            depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+            depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-            CComPtr<ID3D10DepthStencilState> depth_stencil_state{};
+            CComPtr<ID3D11DepthStencilState> depth_stencil_state{};
             const auto res = device.CreateDepthStencilState(&depth_stencil_desc, &depth_stencil_state);
 
             if (FAILED(res) || !depth_stencil_state)
@@ -228,20 +230,20 @@ namespace gameoverlay::dxgi
             return depth_stencil_state;
         }
 
-        CComPtr<ID3D10Texture2D> create_texture_2d(ID3D10Device& device, const dimensions dim, const DXGI_FORMAT format)
+        CComPtr<ID3D11Texture2D> create_texture_2d(ID3D11Device& device, const dimensions dim, const DXGI_FORMAT format)
         {
-            D3D10_TEXTURE2D_DESC desc{};
+            D3D11_TEXTURE2D_DESC desc{};
             desc.Width = dim.width;
             desc.Height = dim.height;
             desc.MipLevels = desc.ArraySize = 1;
             desc.Format = format;
             desc.SampleDesc.Count = 1;
-            desc.Usage = D3D10_USAGE_DYNAMIC;
-            desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
-            desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+            desc.Usage = D3D11_USAGE_DYNAMIC;
+            desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+            desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
             desc.MiscFlags = 0;
 
-            CComPtr<ID3D10Texture2D> texture{};
+            CComPtr<ID3D11Texture2D> texture{};
             const auto res = device.CreateTexture2D(&desc, nullptr, &texture);
 
             if (FAILED(res) || !texture)
@@ -252,21 +254,21 @@ namespace gameoverlay::dxgi
             return texture;
         }
 
-        CComPtr<ID3D10ShaderResourceView> create_shader_resource_view(ID3D10Texture2D& texture)
+        CComPtr<ID3D11ShaderResourceView> create_shader_resource_view(ID3D11Texture2D& texture)
         {
-            CComPtr<ID3D10Device> device{};
+            CComPtr<ID3D11Device> device{};
             texture.GetDevice(&device);
 
-            D3D10_TEXTURE2D_DESC desc{};
+            D3D11_TEXTURE2D_DESC desc{};
             texture.GetDesc(&desc);
 
-            D3D10_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+            D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc{};
             srv_desc.Format = desc.Format;
-            srv_desc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
+            srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
             srv_desc.Texture2D.MipLevels = 1;
             srv_desc.Texture2D.MostDetailedMip = 0;
 
-            CComPtr<ID3D10ShaderResourceView> shader_resource_view{};
+            CComPtr<ID3D11ShaderResourceView> shader_resource_view{};
             const auto res = device->CreateShaderResourceView(&texture, &srv_desc, &shader_resource_view);
 
             if (FAILED(res) || !shader_resource_view)
@@ -277,24 +279,27 @@ namespace gameoverlay::dxgi
             return shader_resource_view;
         }
 
-        void translate_vertices(ID3D10Buffer& vertex_buffer, const int32_t x, const int32_t y, const COLORREF color)
+        void translate_vertices(ID3D11Buffer& vertex_buffer, const int32_t x, const int32_t y, const COLORREF color)
         {
-            CComPtr<ID3D10Device> device{};
+            CComPtr<ID3D11Device> device{};
             vertex_buffer.GetDevice(&device);
 
-            void* mapped_data{};
-            if (FAILED(vertex_buffer.Map(D3D10_MAP_WRITE_DISCARD, 0, &mapped_data)))
+            CComPtr<ID3D11DeviceContext> context{};
+            device->GetImmediateContext(&context);
+
+            D3D11_MAPPED_SUBRESOURCE mapped_data{};
+            if (FAILED(context->Map(&vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_data)))
             {
                 return;
             }
 
             const auto _ = utils::finally([&] {
-                vertex_buffer.Unmap(); //
+                context->Unmap(&vertex_buffer, 0); //
             });
 
             UINT num_viewports = 1;
-            D3D10_VIEWPORT viewport{};
-            device->RSGetViewports(&num_viewports, &viewport);
+            D3D11_VIEWPORT viewport{};
+            context->RSGetViewports(&num_viewports, &viewport);
 
             const auto f_x = static_cast<float>(x);
             const auto f_y = static_cast<float>(y);
@@ -308,7 +313,7 @@ namespace gameoverlay::dxgi
             const auto h1 = 1.0f - 2.0f * f_y / f_height;
             const auto h2 = 1.0f - 2.0f * (f_y + f_height) / f_height;
 
-            auto* v = static_cast<vertex*>(mapped_data);
+            auto* v = static_cast<vertex*>(mapped_data.pData);
 
             v[0] = vertex(w1, h1, 0.5f, 0.0f, 0.0f, color);
             v[1] = vertex(w2, h1, 0.5f, 1.0f, 0.0f, color);
@@ -317,15 +322,17 @@ namespace gameoverlay::dxgi
         }
     }
 
-    d3d11_canvas::d3d11_canvas(ID3D10Device& device)
+    d3d11_canvas::d3d11_canvas(ID3D11Device& device)
         : device_(&device)
     {
+        device.GetImmediateContext(&this->context_);
+
         this->effect_ = create_shader(device);
 
         this->effect_technique_ = this->effect_->GetTechniqueByName("SpriteTech");
         this->effect_shader_resource_variable_ = this->effect_->GetVariableByName("SpriteTex")->AsShaderResource();
 
-        D3D10_PASS_DESC pass_desc{};
+        D3DX11_PASS_DESC pass_desc{};
         this->effect_technique_->GetPassByIndex(0)->GetDesc(&pass_desc);
 
         this->input_layout_ = create_input_layout(device, pass_desc);
@@ -335,7 +342,7 @@ namespace gameoverlay::dxgi
         this->depth_stencil_state_ = create_depth_stencil_state(device);
     }
 
-    d3d11_canvas::d3d11_canvas(ID3D10Device& device, const dimensions dim)
+    d3d11_canvas::d3d11_canvas(ID3D11Device& device, const dimensions dim)
         : d3d11_canvas(device)
     {
         this->resize(dim);
@@ -354,28 +361,28 @@ namespace gameoverlay::dxgi
             return;
         }
 
-        D3D10_TEXTURE2D_DESC desc{};
+        D3D11_TEXTURE2D_DESC desc{};
         this->texture_->GetDesc(&desc);
 
         const auto row_pitch = image.size() / this->get_height();
 
-        if (desc.Usage == D3D10_USAGE_DYNAMIC &&
-            (desc.CPUAccessFlags & D3D10_CPU_ACCESS_WRITE) == D3D10_CPU_ACCESS_WRITE)
+        if (desc.Usage == D3D11_USAGE_DYNAMIC &&
+            (desc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE) == D3D11_CPU_ACCESS_WRITE)
         {
-            D3D10_MAPPED_TEXTURE2D texmap{};
-            if (SUCCEEDED(this->texture_->Map(0, D3D10_MAP_WRITE_DISCARD, 0, &texmap)))
+            D3D11_MAPPED_SUBRESOURCE texmap{};
+            if (SUCCEEDED(this->context_->Map(this->texture_, 0, D3D11_MAP_WRITE_DISCARD, 0, &texmap)))
             {
                 const auto _ = utils::finally([&] {
-                    this->texture_->Unmap(0); //
+                    this->context_->Unmap(this->texture_, 0); //
                 });
 
                 assert(texmap.RowPitch == row_pitch);
                 std::memcpy(texmap.pData, image.data(), image.size());
             }
         }
-        else if (desc.Usage == D3D10_USAGE_DEFAULT)
+        else if (desc.Usage == D3D11_USAGE_DEFAULT)
         {
-            D3D10_BOX box{};
+            D3D11_BOX box{};
             box.top = 0;
             box.left = 0;
             box.front = 0;
@@ -383,16 +390,16 @@ namespace gameoverlay::dxgi
             box.right = this->get_width();
             box.bottom = this->get_height();
 
-            this->device_->UpdateSubresource(this->texture_, 0, &box, image.data(), static_cast<UINT>(row_pitch),
-                                             static_cast<UINT>(image.size()));
+            this->context_->UpdateSubresource(this->texture_, 0, &box, image.data(), static_cast<UINT>(row_pitch),
+                                              static_cast<UINT>(image.size()));
         }
     }
 
     void d3d11_canvas::draw() const
     {
-        context_store _{*this->device_};
+        context_store _{*this->context_};
 
-        auto& d = *this->device_;
+        auto& c = *this->context_;
 
         constexpr UINT offset = 0;
         constexpr UINT stride = sizeof(vertex);
@@ -402,14 +409,14 @@ namespace gameoverlay::dxgi
         translate_vertices(*this->vertex_buffer_, 0, 0, ~0UL);
 
         this->effect_shader_resource_variable_->SetResource(this->shader_resource_view_);
-        this->effect_technique_->GetPassByIndex(0)->Apply(0);
+        this->effect_technique_->GetPassByIndex(0)->Apply(0, &c);
 
-        d.OMSetBlendState(this->blend_state_, blendFactor, 0xffffffff);
-        d.OMSetDepthStencilState(this->depth_stencil_state_, 1);
-        d.IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        d.IASetIndexBuffer(this->index_buffer_, DXGI_FORMAT_R32_UINT, 0);
-        d.IASetVertexBuffers(0, 1, &vertex_buffer, &stride, &offset);
-        d.IASetInputLayout(this->input_layout_);
-        d.DrawIndexed(6, 0, 0);
+        c.OMSetBlendState(this->blend_state_, blendFactor, 0xffffffff);
+        c.OMSetDepthStencilState(this->depth_stencil_state_, 1);
+        c.IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        c.IASetIndexBuffer(this->index_buffer_, DXGI_FORMAT_R32_UINT, 0);
+        c.IASetVertexBuffers(0, 1, &vertex_buffer, &stride, &offset);
+        c.IASetInputLayout(this->input_layout_);
+        c.DrawIndexed(6, 0, 0);
     }
 }

@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include "d3d10_canvas.hpp"
+#include "d3d11_canvas.hpp"
 
 namespace gameoverlay::dxgi
 {
@@ -100,7 +101,7 @@ namespace gameoverlay::dxgi
             case backend_type::d3d10:
                 return create_dxgi_canvas<d3d10_canvas, ID3D10Device>(swap_chain, dim);
             case backend_type::d3d11:
-                // TODO
+                return create_dxgi_canvas<d3d11_canvas, ID3D11Device>(swap_chain, dim);
             default:
                 throw std::runtime_error("Failed to create canvas");
             }

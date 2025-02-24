@@ -16,7 +16,6 @@ target_link_libraries(backend-dxgi PUBLIC
 )
 
 target_link_libraries(backend-dxgi PRIVATE
-  DirectXTK
   Effects11
 )
 
