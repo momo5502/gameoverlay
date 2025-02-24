@@ -6,6 +6,7 @@ namespace gameoverlay
     {
         d3d8,
         d3d9,
+        dxgi,
         d3d10,
         d3d11,
         d3d12,
