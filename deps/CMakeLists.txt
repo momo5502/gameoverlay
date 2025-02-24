@@ -3,15 +3,6 @@ momo_silence_deprecation_warnings()
 ##########################################
 
 add_subdirectory(minhook)
-add_subdirectory(fx11)
-
-##########################################
-
-option(BUILD_TOOLS "" OFF)
-option(BUILD_SHARED_LIBS "" ON)
-
-add_subdirectory(directxtk)
-
 
 ##########################################
 
@@ -21,6 +12,13 @@ add_subdirectory(glew)
 ##########################################
 
 include(dxsdk.cmake)
+
+##########################################
+
+option(BUILD_TOOLS "" OFF)
+
+add_subdirectory(directxtk)
+add_subdirectory(fx11)
 
 ##########################################
 

@@ -1,7 +1,7 @@
 #pragma once
 
-// #include "d3d9_canvas.hpp"
 #include "dxgi_win.hpp"
+#include "dxgi_canvas.hpp"
 
 #include <memory>
 #include <renderer.hpp>
@@ -20,7 +20,8 @@ namespace gameoverlay::dxgi
       private:
         HWND window_{};
         backend_type type_{backend_type::dxgi};
-        IDXGISwapChain* swap_chain_{};
-        std::unique_ptr<canvas> canvas_{};
+
+        CComPtr<IDXGISwapChain> swap_chain_{};
+        std::unique_ptr<dxgi_canvas> canvas_{};
     };
 }

@@ -1,11 +1,24 @@
 #include "dxgi_renderer.hpp"
 
 #include <stdexcept>
+#include "d3d10_canvas.hpp"
 
 namespace gameoverlay::dxgi
 {
     namespace
     {
+        template <typename Device>
+        CComPtr<Device> get_device(IDXGISwapChain& swap_chain)
+        {
+            CComPtr<Device> device{};
+            if (FAILED(swap_chain.GetDevice(__uuidof(Device), reinterpret_cast<void**>(&device))))
+            {
+                return {};
+            }
+
+            return device;
+        }
+
         HWND get_swap_chain_window(IDXGISwapChain& swap_chain)
         {
             DXGI_SWAP_CHAIN_DESC desc{};
@@ -16,6 +29,82 @@ namespace gameoverlay::dxgi
 
             return desc.OutputWindow;
         }
+
+        dimensions get_d3d10_dimensions(IDXGISwapChain& swap_chain)
+        {
+            const auto device = get_device<ID3D10Device>(swap_chain);
+            if (!device)
+            {
+                return {};
+            }
+
+            UINT num_viewports = 1;
+            D3D10_VIEWPORT viewport{};
+
+            device->RSGetViewports(&num_viewports, &viewport);
+
+            return {
+                viewport.Width,
+                viewport.Height,
+            };
+        }
+
+        dimensions get_d3d11_dimensions(IDXGISwapChain& swap_chain)
+        {
+            const auto device = get_device<ID3D11Device>(swap_chain);
+            if (!device)
+            {
+                return {};
+            }
+
+            CComPtr<ID3D11DeviceContext> context{};
+            device->GetImmediateContext(&context);
+
+            UINT num_viewports = 1;
+            D3D11_VIEWPORT viewport{};
+
+            context->RSGetViewports(&num_viewports, &viewport);
+
+            return {
+                static_cast<uint32_t>(viewport.Width),
+                static_cast<uint32_t>(viewport.Height),
+            };
+        }
+
+        dimensions get_swap_chain_dimensions(IDXGISwapChain& swap_chain, const backend_type type)
+        {
+            switch (type)
+            {
+            case backend_type::d3d10:
+                return get_d3d10_dimensions(swap_chain);
+            case backend_type::d3d11:
+                return get_d3d11_dimensions(swap_chain);
+            default:
+                return {};
+            }
+        }
+
+        template <typename Canvas, typename Device>
+            requires(std::is_base_of_v<dxgi_canvas, Canvas>)
+        std::unique_ptr<dxgi_canvas> create_dxgi_canvas(IDXGISwapChain& swap_chain, const dimensions dim)
+        {
+            auto device = get_device<Device>(swap_chain);
+            return std::make_unique<Canvas>(*device, dim);
+        }
+
+        std::unique_ptr<dxgi_canvas> create_canvas(IDXGISwapChain& swap_chain, const backend_type type,
+                                                   const dimensions dim)
+        {
+            switch (type)
+            {
+            case backend_type::d3d10:
+                return create_dxgi_canvas<d3d10_canvas, ID3D10Device>(swap_chain, dim);
+            case backend_type::d3d11:
+                // TODO
+            default:
+                throw std::runtime_error("Failed to create canvas");
+            }
+        }
     }
 
     dxgi_renderer::dxgi_renderer(owned_handler h, IDXGISwapChain& swap_chain)
@@ -23,18 +112,14 @@ namespace gameoverlay::dxgi
           window_(get_swap_chain_window(swap_chain)),
           swap_chain_(&swap_chain)
     {
-        CComPtr<ID3D10Device> device10{};
-        swap_chain.GetDevice(__uuidof(ID3D10Device), reinterpret_cast<void**>(&device10));
-
+        const auto device10 = get_device<ID3D10Device>(swap_chain);
         if (device10)
         {
             this->type_ = backend_type::d3d10;
             return;
         }
 
-        CComPtr<ID3D11Device> device11{};
-        swap_chain.GetDevice(__uuidof(ID3D11Device), reinterpret_cast<void**>(&device11));
-
+        const auto device11 = get_device<ID3D10Device>(swap_chain);
         if (device11)
         {
             this->type_ = backend_type::d3d11;
@@ -53,13 +138,18 @@ namespace gameoverlay::dxgi
 
     void dxgi_renderer::draw_frame()
     {
-        /* const auto current_dim = get_device_dimensions(*this->device_);
-         if (!this->canvas_ || this->canvas_->get_dimensions() != current_dim)
-         {
-             this->canvas_ = std::make_unique<d3d9_canvas>(this->device_, current_dim.width, current_dim.height);
-         }
+        const auto dim = get_swap_chain_dimensions(*this->swap_chain_, this->type_);
 
-         this->handle_new_frame(*this->canvas_);
-         this->canvas_->draw();*/
+        if (!this->canvas_)
+        {
+            this->canvas_ = create_canvas(*this->swap_chain_, this->type_, dim);
+        }
+
+        if (this->canvas_->get_dimensions() != dim)
+        {
+            this->canvas_->resize(dim);
+        }
+
+        this->canvas_->draw();
     }
 }

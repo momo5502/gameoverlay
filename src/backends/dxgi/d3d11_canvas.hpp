@@ -5,11 +5,11 @@
 
 namespace gameoverlay::dxgi
 {
-    class d3d10_canvas : public dxgi_canvas
+    class d3d11_canvas : public dxgi_canvas
     {
       public:
-        d3d10_canvas(ID3D10Device& device);
-        d3d10_canvas(ID3D10Device& device, dimensions dim);
+        d3d11_canvas(ID3D10Device& device);
+        d3d11_canvas(ID3D10Device& device, dimensions dim);
 
         void paint(std::span<const uint8_t> image) override;
 

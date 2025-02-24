@@ -1,4 +1,4 @@
-#include "d3d10_canvas.hpp"
+#include "d3d11_canvas.hpp"
 
 #include <cassert>
 #include <stdexcept>
@@ -317,7 +317,7 @@ namespace gameoverlay::dxgi
         }
     }
 
-    d3d10_canvas::d3d10_canvas(ID3D10Device& device)
+    d3d11_canvas::d3d11_canvas(ID3D10Device& device)
         : device_(&device)
     {
         this->effect_ = create_shader(device);
@@ -335,19 +335,19 @@ namespace gameoverlay::dxgi
         this->depth_stencil_state_ = create_depth_stencil_state(device);
     }
 
-    d3d10_canvas::d3d10_canvas(ID3D10Device& device, const dimensions dim)
-        : d3d10_canvas(device)
+    d3d11_canvas::d3d11_canvas(ID3D10Device& device, const dimensions dim)
+        : d3d11_canvas(device)
     {
         this->resize(dim);
     }
 
-    void d3d10_canvas::resize_texture(const dimensions new_dimensions)
+    void d3d11_canvas::resize_texture(const dimensions new_dimensions)
     {
         this->texture_ = create_texture_2d(*this->device_, new_dimensions, DXGI_FORMAT_R8G8B8A8_UNORM);
         this->shader_resource_view_ = create_shader_resource_view(*this->texture_);
     }
 
-    void d3d10_canvas::paint(const std::span<const uint8_t> image)
+    void d3d11_canvas::paint(const std::span<const uint8_t> image)
     {
         if (!this->texture_ || image.size() != this->get_buffer_size())
         {
@@ -388,7 +388,7 @@ namespace gameoverlay::dxgi
         }
     }
 
-    void d3d10_canvas::draw() const
+    void d3d11_canvas::draw() const
     {
         context_store _{*this->device_};
 
