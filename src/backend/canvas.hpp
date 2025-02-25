@@ -19,6 +19,11 @@ struct dimensions
     {
         return !this->operator==(obj);
     }
+
+    bool is_zero() const
+    {
+        return this->width == 0 && this->height == 0;
+    }
 };
 
 class canvas

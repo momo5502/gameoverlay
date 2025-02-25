@@ -19,11 +19,12 @@ namespace gameoverlay::dxgi
         CComPtr<ID3D11Device> device_{};
         CComPtr<ID3D11DeviceContext> context_{};
 
-        CComPtr<ID3DX11Effect> effect_{};
-        ID3DX11EffectTechnique* effect_technique_{};
-        ID3DX11EffectShaderResourceVariable* effect_shader_resource_variable_{};
-
+        CComPtr<ID3D11VertexShader> vertex_shader_{};
+        CComPtr<ID3D11PixelShader> pixel_shader_{};
         CComPtr<ID3D11InputLayout> input_layout_{};
+
+        CComPtr<ID3D11SamplerState> sampler_state_{};
+
         CComPtr<ID3D11Buffer> index_buffer_{};
         CComPtr<ID3D11Buffer> vertex_buffer_{};
         CComPtr<ID3D11BlendState> blend_state_{};

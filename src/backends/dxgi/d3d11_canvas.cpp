@@ -42,67 +42,89 @@ namespace gameoverlay::dxgi
             }
         };
 
-        CComPtr<ID3DX11Effect> create_shader(ID3D11Device& device)
+        constexpr char vertex_shader_src[] = R"(
+            struct VertexIn {
+                float3 Pos : POSITION;
+                float2 Tex : TEXCOORD;
+                float4 Color : COLOR;
+            };
+
+            struct VertexOut {
+                float4 Pos : SV_POSITION;
+                float2 Tex : TEXCOORD;
+                float4 Color : COLOR;
+            };
+
+            VertexOut VS(VertexIn vin) {
+                VertexOut vout;
+                vout.Pos = float4(vin.Pos, 1.0f);
+                vout.Tex = vin.Tex;
+                vout.Color = vin.Color;
+                return vout;
+            }
+        )";
+
+        constexpr char pixel_shader_src[] = R"(
+            Texture2D SpriteTex;
+            SamplerState samLinear;
+
+            struct VertexOut {
+                float4 Pos : SV_POSITION;
+                float2 Tex : TEXCOORD;
+                float4 Color : COLOR;
+            };
+
+            float4 PS(VertexOut pin) : SV_Target {
+                return pin.Color * SpriteTex.Sample(samLinear, pin.Tex);
+            }
+        )";
+
+        CComPtr<ID3D11VertexShader> compile_vertex_shader(ID3D11Device& device, ID3DBlob** blob)
         {
-            constexpr char effect_src[] = "Texture2D SpriteTex;"
-                                          "SamplerState samLinear {"
-                                          "     Filter = MIN_MAG_MIP_LINEAR;"
-                                          "     AddressU = WRAP;"
-                                          "     AddressV = WRAP;"
-                                          "};"
-                                          "struct VertexIn {"
-                                          "     float3 PosNdc : POSITION;"
-                                          "     float2 Tex    : TEXCOORD;"
-                                          "     float4 Color  : COLOR;"
-                                          "};"
-                                          "struct VertexOut {"
-                                          "     float4 PosNdc : SV_POSITION;"
-                                          "     float2 Tex    : TEXCOORD;"
-                                          "     float4 Color  : COLOR;"
-                                          "};"
-                                          "VertexOut VS(VertexIn vin) {"
-                                          "     VertexOut vout;"
-                                          "     vout.PosNdc = float4(vin.PosNdc, 1.0f);"
-                                          "     vout.Tex    = vin.Tex;"
-                                          "     vout.Color  = vin.Color;"
-                                          "     return vout;"
-                                          "};"
-                                          "float4 PS(VertexOut pin) : SV_Target {"
-                                          "     return pin.Color*SpriteTex.Sample(samLinear, pin.Tex);"
-                                          "};"
-                                          "technique11 SpriteTech {"
-                                          "     pass P0 {"
-                                          "         SetVertexShader( CompileShader( vs_4_0, VS() ) );"
-                                          "         SetHullShader( NULL );"
-                                          "         SetDomainShader( NULL );"
-                                          "         SetGeometryShader( NULL );"
-                                          "         SetPixelShader( CompileShader( ps_4_0, PS() ) );"
-                                          "     }"
-                                          "}";
+            CComPtr<ID3D11VertexShader> shader{};
+            CComPtr<ID3DBlob> error_blob{};
+            auto res = D3DCompile(vertex_shader_src, sizeof(vertex_shader_src), nullptr, nullptr, nullptr, "VS",
+                                  "vs_5_0", 0, 0, blob, &error_blob);
 
-            CComPtr<ID3D10Blob> shader_buffer{};
-
-            auto res = D3DCompile(effect_src, sizeof(effect_src), nullptr, nullptr, nullptr, "SpriteTech", "fx_5_0", 0,
-                                  0, &shader_buffer, nullptr);
-
-            if (FAILED(res) || !shader_buffer)
+            if (FAILED(res))
             {
-                throw std::runtime_error("Failed to compile effect");
+                throw std::runtime_error("Failed to compile vertex shader");
             }
 
-            CComPtr<ID3DX11Effect> effect{};
-            res = D3DX11CreateEffectFromMemory(shader_buffer->GetBufferPointer(), shader_buffer->GetBufferSize(), 0,
-                                               &device, &effect);
-
-            if (FAILED(res) || !effect)
+            res = device.CreateVertexShader((*blob)->GetBufferPointer(), (*blob)->GetBufferSize(), nullptr, &shader);
+            if (FAILED(res))
             {
-                throw std::runtime_error("Failed to create effect");
+                throw std::runtime_error("Failed to create vertex shader");
             }
 
-            return effect;
+            return shader;
         }
 
-        CComPtr<ID3D11InputLayout> create_input_layout(ID3D11Device& device, const D3DX11_PASS_DESC& pass_desc)
+        CComPtr<ID3D11PixelShader> compile_pixel_shader(ID3D11Device& device)
+        {
+            CComPtr<ID3D11PixelShader> shader{};
+            CComPtr<ID3DBlob> shader_blob{};
+            CComPtr<ID3DBlob> error_blob{};
+
+            auto res = D3DCompile(pixel_shader_src, sizeof(pixel_shader_src), nullptr, nullptr, nullptr, "PS", "ps_5_0",
+                                  0, 0, &shader_blob, &error_blob);
+
+            if (FAILED(res))
+            {
+                throw std::runtime_error("Failed to compile pixel shader");
+            }
+
+            res = device.CreatePixelShader(shader_blob->GetBufferPointer(), shader_blob->GetBufferSize(), nullptr,
+                                           &shader);
+            if (FAILED(res))
+            {
+                throw std::runtime_error("Failed to create pixel shader");
+            }
+
+            return shader;
+        }
+
+        CComPtr<ID3D11InputLayout> create_input_layout(ID3D11Device& device, ID3DBlob& vs_blob)
         {
             D3D11_INPUT_ELEMENT_DESC layout[] = {
                 {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -111,8 +133,8 @@ namespace gameoverlay::dxgi
             };
 
             CComPtr<ID3D11InputLayout> input_layout{};
-            const auto res = device.CreateInputLayout(layout, ARRAYSIZE(layout), pass_desc.pIAInputSignature,
-                                                      pass_desc.IAInputSignatureSize, &input_layout);
+            const auto res = device.CreateInputLayout(layout, ARRAYSIZE(layout), vs_blob.GetBufferPointer(),
+                                                      vs_blob.GetBufferSize(), &input_layout);
             if (FAILED(res) || !input_layout)
             {
                 throw std::runtime_error("Failed to create input layout");
@@ -327,15 +349,11 @@ namespace gameoverlay::dxgi
     {
         device.GetImmediateContext(&this->context_);
 
-        this->effect_ = create_shader(device);
+        CComPtr<ID3DBlob> vs_blob{};
+        this->vertex_shader_ = compile_vertex_shader(*device_, &vs_blob);
+        this->pixel_shader_ = compile_pixel_shader(*device_);
+        this->input_layout_ = create_input_layout(*device_, *vs_blob);
 
-        this->effect_technique_ = this->effect_->GetTechniqueByName("SpriteTech");
-        this->effect_shader_resource_variable_ = this->effect_->GetVariableByName("SpriteTex")->AsShaderResource();
-
-        D3DX11_PASS_DESC pass_desc{};
-        this->effect_technique_->GetPassByIndex(0)->GetDesc(&pass_desc);
-
-        this->input_layout_ = create_input_layout(device, pass_desc);
         this->index_buffer_ = create_index_buffer(device);
         this->vertex_buffer_ = create_vertex_buffer(device);
         this->blend_state_ = create_blend_state(device);
@@ -350,6 +368,11 @@ namespace gameoverlay::dxgi
 
     void d3d11_canvas::resize_texture(const dimensions new_dimensions)
     {
+        if (new_dimensions.is_zero())
+        {
+            return;
+        }
+
         this->texture_ = create_texture_2d(*this->device_, new_dimensions, DXGI_FORMAT_R8G8B8A8_UNORM);
         this->shader_resource_view_ = create_shader_resource_view(*this->texture_);
     }
@@ -364,7 +387,8 @@ namespace gameoverlay::dxgi
         D3D11_TEXTURE2D_DESC desc{};
         this->texture_->GetDesc(&desc);
 
-        const auto row_pitch = image.size() / this->get_height();
+        const auto height = this->get_height();
+        const auto row_pitch = image.size() / height;
 
         if (desc.Usage == D3D11_USAGE_DYNAMIC &&
             (desc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE) == D3D11_CPU_ACCESS_WRITE)
@@ -376,8 +400,13 @@ namespace gameoverlay::dxgi
                     this->context_->Unmap(this->texture_, 0); //
                 });
 
-                assert(texmap.RowPitch == row_pitch);
-                std::memcpy(texmap.pData, image.data(), image.size());
+                for (size_t i = 0; i < height; ++i)
+                {
+                    auto* src = image.data() + (i * row_pitch);
+                    auto* dest = static_cast<uint8_t*>(texmap.pData) + (i * texmap.RowPitch);
+
+                    std::memcpy(dest, src, row_pitch);
+                }
             }
         }
         else if (desc.Usage == D3D11_USAGE_DEFAULT)
@@ -401,22 +430,23 @@ namespace gameoverlay::dxgi
 
         auto& c = *this->context_;
 
-        constexpr UINT offset = 0;
         constexpr UINT stride = sizeof(vertex);
+        constexpr UINT offset = 0;
         constexpr float blendFactor[4] = {0.f, 0.f, 0.f, 0.f};
 
-        auto* vertex_buffer = &*this->vertex_buffer_;
         translate_vertices(*this->vertex_buffer_, 0, 0, ~0UL);
 
-        this->effect_shader_resource_variable_->SetResource(this->shader_resource_view_);
-        this->effect_technique_->GetPassByIndex(0)->Apply(0, &c);
+        c.IASetInputLayout(this->input_layout_);
+        c.IASetVertexBuffers(0, 1, &vertex_buffer_.p, &stride, &offset);
+        c.IASetIndexBuffer(this->index_buffer_, DXGI_FORMAT_R32_UINT, 0);
+        c.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+        c.VSSetShader(this->vertex_shader_, nullptr, 0);
+        c.PSSetShader(this->pixel_shader_, nullptr, 0);
+        c.PSSetShaderResources(0, 1, &shader_resource_view_.p);
         c.OMSetBlendState(this->blend_state_, blendFactor, 0xffffffff);
         c.OMSetDepthStencilState(this->depth_stencil_state_, 1);
-        c.IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        c.IASetIndexBuffer(this->index_buffer_, DXGI_FORMAT_R32_UINT, 0);
-        c.IASetVertexBuffers(0, 1, &vertex_buffer, &stride, &offset);
-        c.IASetInputLayout(this->input_layout_);
+
         c.DrawIndexed(6, 0, 0);
     }
 }
