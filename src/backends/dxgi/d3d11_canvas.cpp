@@ -82,7 +82,7 @@ namespace gameoverlay::dxgi
 
             CComPtr<ID3D10Blob> shader_buffer{};
 
-            auto res = D3DCompile(effect_src, sizeof(effect_src), nullptr, nullptr, nullptr, "SpriteTech", "fx_4_0", 0,
+            auto res = D3DCompile(effect_src, sizeof(effect_src), nullptr, nullptr, nullptr, "SpriteTech", "fx_5_0", 0,
                                   0, &shader_buffer, nullptr);
 
             if (FAILED(res) || !shader_buffer)

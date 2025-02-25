@@ -120,10 +120,17 @@ namespace gameoverlay::dxgi
             return;
         }
 
-        const auto device11 = get_device<ID3D10Device>(swap_chain);
+        const auto device11 = get_device<ID3D11Device>(swap_chain);
         if (device11)
         {
             this->type_ = backend_type::d3d11;
+            return;
+        }
+
+        const auto device12 = get_device<ID3D12Device>(swap_chain);
+        if (device12)
+        {
+            this->type_ = backend_type::d3d12;
         }
     }
 
@@ -144,6 +151,11 @@ namespace gameoverlay::dxgi
         if (!this->canvas_)
         {
             this->canvas_ = create_canvas(*this->swap_chain_, this->type_, dim);
+        }
+
+        if (!this->canvas_)
+        {
+            return;
         }
 
         if (this->canvas_->get_dimensions() != dim)
