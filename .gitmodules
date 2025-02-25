@@ -6,7 +6,7 @@
 	url = https://github.com/Perlmint/glew-cmake.git
 [submodule "deps/dxsdk"]
 	path = deps/dxsdk
-	url = https://github.com/devKlausS/dxsdk.git
+	url = ../dxsdk.git
 [submodule "deps/fx11"]
 	path = deps/fx11
 	url = https://github.com/Microsoft/FX11.git
