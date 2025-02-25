@@ -226,6 +226,24 @@ namespace gameoverlay::dxgi
             return blend_state;
         }
 
+        CComPtr<ID3D10RasterizerState> create_rasterizer_state(ID3D10Device& device)
+        {
+            D3D10_RASTERIZER_DESC rasterizer_desc{};
+            rasterizer_desc.FillMode = D3D10_FILL_SOLID;
+            rasterizer_desc.CullMode = D3D10_CULL_NONE;
+            rasterizer_desc.FrontCounterClockwise = TRUE;
+
+            CComPtr<ID3D10RasterizerState> rasterizer_state{};
+            const auto res = device.CreateRasterizerState(&rasterizer_desc, &rasterizer_state);
+
+            if (FAILED(res) || !rasterizer_state)
+            {
+                throw std::runtime_error("Failed to create rasterizer state");
+            }
+
+            return rasterizer_state;
+        }
+
         CComPtr<ID3D10DepthStencilState> create_depth_stencil_state(ID3D10Device& device)
         {
             D3D10_DEPTH_STENCIL_DESC depth_stencil_desc{};
@@ -355,6 +373,7 @@ namespace gameoverlay::dxgi
         this->index_buffer_ = create_index_buffer(device);
         this->vertex_buffer_ = create_vertex_buffer(device);
         this->blend_state_ = create_blend_state(device);
+        this->rasterizer_state_ = create_rasterizer_state(device);
         this->depth_stencil_state_ = create_depth_stencil_state(device);
     }
 
@@ -424,6 +443,7 @@ namespace gameoverlay::dxgi
         translate_vertices(*this->vertex_buffer_, 0, 0, ~0UL);
 
         d.OMSetBlendState(this->blend_state_, blendFactor, 0xffffffff);
+        d.RSSetState(this->rasterizer_state_);
         d.OMSetDepthStencilState(this->depth_stencil_state_, 1);
         d.IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         d.IASetVertexBuffers(0, 1, &this->vertex_buffer_.p, &stride, &offset);

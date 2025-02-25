@@ -26,6 +26,7 @@ namespace gameoverlay::dxgi
         CComPtr<ID3D11Buffer> index_buffer_{};
         CComPtr<ID3D11Buffer> vertex_buffer_{};
         CComPtr<ID3D11BlendState> blend_state_{};
+        CComPtr<ID3D11RasterizerState> rasterizer_state_{};
         CComPtr<ID3D11DepthStencilState> depth_stencil_state_{};
 
         CComPtr<ID3D11Texture2D> texture_{};
