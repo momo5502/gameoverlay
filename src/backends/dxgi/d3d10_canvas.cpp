@@ -366,9 +366,9 @@ namespace gameoverlay::dxgi
         : device_(&device)
     {
         CComPtr<ID3DBlob> vs_blob{};
-        this->vertex_shader_ = compile_vertex_shader(*device_, &vs_blob);
-        this->pixel_shader_ = compile_pixel_shader(*device_);
-        this->input_layout_ = create_input_layout(*device_, *vs_blob);
+        this->vertex_shader_ = compile_vertex_shader(device, &vs_blob);
+        this->pixel_shader_ = compile_pixel_shader(device);
+        this->input_layout_ = create_input_layout(device, *vs_blob);
 
         this->index_buffer_ = create_index_buffer(device);
         this->vertex_buffer_ = create_vertex_buffer(device);
