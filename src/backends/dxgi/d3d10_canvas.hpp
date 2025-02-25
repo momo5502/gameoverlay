@@ -18,11 +18,10 @@ namespace gameoverlay::dxgi
       private:
         CComPtr<ID3D10Device> device_{};
 
-        CComPtr<ID3D10Effect> effect_{};
-        ID3D10EffectTechnique* effect_technique_{};
-        ID3D10EffectShaderResourceVariable* effect_shader_resource_variable_{};
-
+        CComPtr<ID3D10VertexShader> vertex_shader_{};
+        CComPtr<ID3D10PixelShader> pixel_shader_{};
         CComPtr<ID3D10InputLayout> input_layout_{};
+
         CComPtr<ID3D10Buffer> index_buffer_{};
         CComPtr<ID3D10Buffer> vertex_buffer_{};
         CComPtr<ID3D10BlendState> blend_state_{};

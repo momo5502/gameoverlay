@@ -23,8 +23,6 @@ namespace gameoverlay::dxgi
         CComPtr<ID3D11PixelShader> pixel_shader_{};
         CComPtr<ID3D11InputLayout> input_layout_{};
 
-        CComPtr<ID3D11SamplerState> sampler_state_{};
-
         CComPtr<ID3D11Buffer> index_buffer_{};
         CComPtr<ID3D11Buffer> vertex_buffer_{};
         CComPtr<ID3D11BlendState> blend_state_{};
