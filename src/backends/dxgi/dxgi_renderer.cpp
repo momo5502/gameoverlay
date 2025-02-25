@@ -138,6 +138,8 @@ namespace gameoverlay::dxgi
                     return 0;
                 }();
                 (void)x;
+
+                return {};
             }
             }
         }
