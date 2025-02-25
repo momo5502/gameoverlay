@@ -9,8 +9,10 @@ namespace utils
         std::string get_unique_window_class_name()
         {
             static std::atomic_uint64_t counter{0};
-            return "dummy-window-" + std::to_string(GetCurrentProcessId()) + "-" +
-                   std::to_string(GetCurrentThreadId()) + "-" + std::to_string(counter++);
+            return "dummy-window-"                               //
+                   + std::to_string(GetCurrentProcessId()) + "-" //
+                   + std::to_string(GetCurrentThreadId()) + "-"  //
+                   + std::to_string(counter++);
         }
 
         void register_window_class(const std::string& class_name)
@@ -21,6 +23,13 @@ namespace utils
             wc.lpszClassName = class_name.c_str();
 
             RegisterClassA(&wc);
+        }
+
+        std::string register_unique_window_class()
+        {
+            auto class_name = get_unique_window_class_name();
+            register_window_class(class_name);
+            return class_name;
         }
 
         HWND create_dummy_window(const std::string& class_name)
@@ -40,7 +49,7 @@ namespace utils
     }
 
     dummy_window::dummy_window()
-        : window_class_(get_unique_window_class_name()),
+        : window_class_(register_unique_window_class()),
           window_(create_dummy_window(window_class_))
     {
     }
