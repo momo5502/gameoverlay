@@ -15,10 +15,6 @@ target_link_libraries(backend-dxgi PUBLIC
   backend
 )
 
-target_link_libraries(backend-dxgi PRIVATE
-  Effects11
-)
-
 target_include_directories(backend-dxgi PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/include"
 )

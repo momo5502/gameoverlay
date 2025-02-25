@@ -3,7 +3,6 @@ momo_silence_deprecation_warnings()
 ##########################################
 
 add_subdirectory(minhook)
-add_subdirectory(fx11)
 
 ##########################################
 

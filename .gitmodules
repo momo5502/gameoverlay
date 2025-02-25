@@ -7,6 +7,3 @@
 [submodule "deps/dxsdk"]
 	path = deps/dxsdk
 	url = ../dxsdk.git
-[submodule "deps/fx11"]
-	path = deps/fx11
-	url = https://github.com/Microsoft/FX11.git
