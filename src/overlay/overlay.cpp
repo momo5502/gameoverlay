@@ -4,6 +4,7 @@
 #include <backend_d3d9.hpp>
 #include <backend_dxgi.hpp>
 #include <backend_opengl.hpp>
+#include <string>
 
 namespace gameoverlay
 {
@@ -50,9 +51,10 @@ namespace gameoverlay
                         return std::make_unique<overlay_renderer_handler>();
                     }
 
-                    void on_new_renderer(renderer&) override
+                    void on_new_renderer(renderer& r) override
                     {
-                        OutputDebugStringA("New renderer!");
+                        OutputDebugStringA(
+                            ("New renderer: " + std::to_string(static_cast<int>(r.get_backend_type()))).data());
                     }
                 };
 

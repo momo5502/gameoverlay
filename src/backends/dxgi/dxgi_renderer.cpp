@@ -1,6 +1,5 @@
 #include "dxgi_renderer.hpp"
 
-#include <stdexcept>
 #include "d3d10_canvas.hpp"
 #include "d3d11_canvas.hpp"
 
@@ -31,8 +30,33 @@ namespace gameoverlay::dxgi
             return desc.OutputWindow;
         }
 
+        template <typename Texture, typename Description>
+        dimensions get_swap_chain_dimensions(IDXGISwapChain& swap_chain)
+        {
+            CComPtr<Texture> back_buffer{};
+            HRESULT hr = swap_chain.GetBuffer(0, __uuidof(Texture), reinterpret_cast<void**>(&back_buffer));
+            if (FAILED(hr) || !back_buffer)
+            {
+                return {};
+            }
+
+            Description desc{};
+            back_buffer->GetDesc(&desc);
+
+            return {
+                desc.Width,
+                desc.Height,
+            };
+        }
+
         dimensions get_d3d10_dimensions(IDXGISwapChain& swap_chain)
         {
+            const auto swap_chain_dim = get_swap_chain_dimensions<ID3D10Texture2D, D3D10_TEXTURE2D_DESC>(swap_chain);
+            if (!swap_chain_dim.is_zero())
+            {
+                return swap_chain_dim;
+            }
+
             const auto device = get_device<ID3D10Device>(swap_chain);
             if (!device)
             {
@@ -52,6 +76,12 @@ namespace gameoverlay::dxgi
 
         dimensions get_d3d11_dimensions(IDXGISwapChain& swap_chain)
         {
+            const auto swap_chain_dim = get_swap_chain_dimensions<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>(swap_chain);
+            if (!swap_chain_dim.is_zero())
+            {
+                return swap_chain_dim;
+            }
+
             const auto device = get_device<ID3D11Device>(swap_chain);
             if (!device)
             {
@@ -102,8 +132,13 @@ namespace gameoverlay::dxgi
                 return create_dxgi_canvas<d3d10_canvas, ID3D10Device>(swap_chain, dim);
             case backend_type::d3d11:
                 return create_dxgi_canvas<d3d11_canvas, ID3D11Device>(swap_chain, dim);
-            default:
-                throw std::runtime_error("Failed to create canvas");
+            default: {
+                static const auto x = [] {
+                    OutputDebugStringA("Failed to create dxgi canvas");
+                    return 0;
+                }();
+                (void)x;
+            }
             }
         }
     }
@@ -163,6 +198,7 @@ namespace gameoverlay::dxgi
             this->canvas_->resize(dim);
         }
 
+        this->handle_new_frame(*this->canvas_);
         this->canvas_->draw();
     }
 }

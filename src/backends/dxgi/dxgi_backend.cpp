@@ -2,6 +2,7 @@
 
 #include <backend_dxgi.hpp>
 #include <utils/hook.hpp>
+#include <utils/dummy_window.hpp>
 
 namespace gameoverlay::dxgi
 {
@@ -53,20 +54,28 @@ namespace gameoverlay::dxgi
     {
         g_backend = this;
 
+        const utils::dummy_window window{};
+
         CComPtr<IDXGISwapChain> swap_chain{};
         DXGI_SWAP_CHAIN_DESC swap_chain_desc{};
-        constexpr D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
 
-        ZeroMemory(&swap_chain_desc, sizeof(swap_chain_desc));
-        swap_chain_desc.OutputWindow = GetDesktopWindow();
+        constexpr D3D_FEATURE_LEVEL featureLevels[] = {
+            D3D_FEATURE_LEVEL_11_0,
+            D3D_FEATURE_LEVEL_10_1,
+            D3D_FEATURE_LEVEL_10_0,
+        };
+
         swap_chain_desc.BufferCount = 1;
-        swap_chain_desc.BufferDesc.Width = 1;
-        swap_chain_desc.BufferDesc.Height = 1;
         swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swap_chain_desc.OutputWindow = window.get();
         swap_chain_desc.SampleDesc.Count = 1;
+        swap_chain_desc.Windowed = TRUE;
+        swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
-        if (FAILED(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_NULL, NULL, 0, &featureLevel, 1,
-                                                 D3D11_SDK_VERSION, &swap_chain_desc, &swap_chain, NULL, NULL, NULL)) ||
+        if (FAILED(D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_NULL, NULL, 0, featureLevels,
+                                                 _ARRAYSIZE(featureLevels), D3D11_SDK_VERSION, &swap_chain_desc,
+                                                 &swap_chain, NULL, NULL, NULL)) ||
             !swap_chain)
         {
             return;
