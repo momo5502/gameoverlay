@@ -37,7 +37,7 @@ namespace gameoverlay::dxgi
             CComPtr<Context> context{};
             CComPtr<typename traits::depth_stencil_state> depth_stencil_state{};
 
-            context_store(typename Context& c)
+            context_store(Context& c)
                 : context(&c)
             {
                 this->context->OMGetDepthStencilState(&this->depth_stencil_state, &this->ref);
@@ -738,8 +738,8 @@ namespace gameoverlay::dxgi
             constexpr float blendFactor[4] = {0.f, 0.f, 0.f, 0.f};
 
             typename traits::viewport view_port = {};
-            view_port.Width = static_cast<FLOAT>(this->get_width());
-            view_port.Height = static_cast<FLOAT>(this->get_height());
+            view_port.Width = static_cast<decltype(view_port.Width)>(this->get_width());
+            view_port.Height = static_cast<decltype(view_port.Height)>(this->get_height());
             view_port.MinDepth = 0.0f;
             view_port.MaxDepth = 1.0f;
             view_port.TopLeftX = 0;
