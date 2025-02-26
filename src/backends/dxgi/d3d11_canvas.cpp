@@ -207,7 +207,7 @@ namespace gameoverlay::dxgi
             blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
             blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
             blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-            blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
+            blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
             blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
             blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
             blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
@@ -228,18 +228,8 @@ namespace gameoverlay::dxgi
             D3D11_DEPTH_STENCIL_DESC depth_stencil_desc{};
             depth_stencil_desc.DepthEnable = false;
             depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-            depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
-            depth_stencil_desc.StencilEnable = true;
-            depth_stencil_desc.StencilReadMask = 0xFF;
-            depth_stencil_desc.StencilWriteMask = 0xFF;
-            depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-            depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-            depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-            depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-            depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-            depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-            depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-            depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+            depth_stencil_desc.DepthFunc = D3D11_COMPARISON_ALWAYS;
+            depth_stencil_desc.StencilEnable = false;
 
             CComPtr<ID3D11DepthStencilState> depth_stencil_state{};
             const auto res = device.CreateDepthStencilState(&depth_stencil_desc, &depth_stencil_state);
@@ -319,7 +309,51 @@ namespace gameoverlay::dxgi
             return rasterizer_state;
         }
 
-        void translate_vertices(ID3D11Buffer& vertex_buffer, const int32_t x, const int32_t y, const COLORREF color)
+        CComPtr<ID3D11RenderTargetView> create_render_target_view(ID3D11Device& device, IDXGISwapChain& swap_chain)
+        {
+            CComPtr<ID3D11Texture2D> back_buffer{};
+            auto res = swap_chain.GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer));
+
+            if (FAILED(res) || !back_buffer)
+            {
+                throw std::runtime_error("Failed to get back buffer");
+            }
+
+            CComPtr<ID3D11RenderTargetView> render_target_view{};
+            res = device.CreateRenderTargetView(back_buffer, nullptr, &render_target_view);
+
+            if (FAILED(res) || !back_buffer)
+            {
+                throw std::runtime_error("Failed to get back buffer");
+            }
+
+            return render_target_view;
+        }
+
+        CComPtr<ID3D11SamplerState> create_sampler_state(ID3D11Device& device)
+        {
+            D3D11_SAMPLER_DESC sampler_desc{};
+            sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+            sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+            sampler_desc.MinLOD = 0;
+            sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+
+            CComPtr<ID3D11SamplerState> sampler_state{};
+            const auto res = device.CreateSamplerState(&sampler_desc, &sampler_state);
+
+            if (FAILED(res) || !sampler_state)
+            {
+                throw std::runtime_error("Failed to create sampler state");
+            }
+
+            return sampler_state;
+        }
+
+        void translate_vertices(ID3D11Buffer& vertex_buffer, const int32_t x, const int32_t y, const COLORREF color,
+                                const dimensions dim)
         {
             CComPtr<ID3D11Device> device{};
             vertex_buffer.GetDevice(&device);
@@ -337,15 +371,11 @@ namespace gameoverlay::dxgi
                 context->Unmap(&vertex_buffer, 0); //
             });
 
-            UINT num_viewports = 1;
-            D3D11_VIEWPORT viewport{};
-            context->RSGetViewports(&num_viewports, &viewport);
-
             const auto f_x = static_cast<float>(x);
             const auto f_y = static_cast<float>(y);
 
-            const auto f_width = static_cast<float>(viewport.Width);
-            const auto f_height = static_cast<float>(viewport.Height);
+            const auto f_width = static_cast<float>(dim.width);
+            const auto f_height = static_cast<float>(dim.height);
 
             const auto w1 = 2.0f * f_x / f_width - 1.0f;
             const auto w2 = 2.0f * (f_x + f_width) / f_width - 1.0f;
@@ -360,29 +390,55 @@ namespace gameoverlay::dxgi
             v[2] = vertex(w2, h2, 0.5f, 1.0f, 1.0f, color);
             v[3] = vertex(w1, h2, 0.5f, 0.0f, 1.0f, color);
         }
+
+        template <typename Device>
+        CComPtr<Device> get_device(IDXGISwapChain& swap_chain)
+        {
+            CComPtr<Device> device{};
+            if (FAILED(swap_chain.GetDevice(__uuidof(Device), reinterpret_cast<void**>(&device))))
+            {
+                return {};
+            }
+
+            return device;
+        }
     }
 
-    d3d11_canvas::d3d11_canvas(ID3D11Device& device)
-        : device_(&device)
+    d3d11_canvas::d3d11_canvas(IDXGISwapChain& swap_chain)
+        : swap_chain_(&swap_chain)
     {
-        device.GetImmediateContext(&this->context_);
+        this->device_ = get_device<ID3D11Device>(swap_chain);
+
+        auto& d = *this->device_;
 
         CComPtr<ID3DBlob> vs_blob{};
-        this->vertex_shader_ = compile_vertex_shader(device, &vs_blob);
-        this->pixel_shader_ = compile_pixel_shader(device);
-        this->input_layout_ = create_input_layout(device, *vs_blob);
+        this->vertex_shader_ = compile_vertex_shader(d, &vs_blob);
+        this->pixel_shader_ = compile_pixel_shader(d);
+        this->input_layout_ = create_input_layout(d, *vs_blob);
 
-        this->index_buffer_ = create_index_buffer(device);
-        this->vertex_buffer_ = create_vertex_buffer(device);
-        this->blend_state_ = create_blend_state(device);
-        this->rasterizer_state_ = create_rasterizer_state(device);
-        this->depth_stencil_state_ = create_depth_stencil_state(device);
+        this->index_buffer_ = create_index_buffer(d);
+        this->vertex_buffer_ = create_vertex_buffer(d);
+
+        this->blend_state_ = create_blend_state(d);
+        this->sampler_state_ = create_sampler_state(d);
+        this->rasterizer_state_ = create_rasterizer_state(d);
+        this->depth_stencil_state_ = create_depth_stencil_state(d);
+
+        this->render_target_view_ = create_render_target_view(d, *this->swap_chain_);
     }
 
-    d3d11_canvas::d3d11_canvas(ID3D11Device& device, const dimensions dim)
-        : d3d11_canvas(device)
+    d3d11_canvas::d3d11_canvas(IDXGISwapChain& swap_chain, const dimensions dim)
+        : d3d11_canvas(swap_chain)
     {
         this->resize(dim);
+    }
+
+    CComPtr<ID3D11DeviceContext> d3d11_canvas::get_context() const
+    {
+        CComPtr<ID3D11DeviceContext> context{};
+        this->device_->GetImmediateContext(&context);
+
+        return context;
     }
 
     void d3d11_canvas::resize_texture(const dimensions new_dimensions)
@@ -394,6 +450,8 @@ namespace gameoverlay::dxgi
 
         this->texture_ = create_texture_2d(*this->device_, new_dimensions, DXGI_FORMAT_R8G8B8A8_UNORM);
         this->shader_resource_view_ = create_shader_resource_view(*this->texture_);
+
+        translate_vertices(*this->vertex_buffer_, 0, 0, ~0UL, new_dimensions);
     }
 
     void d3d11_canvas::paint(const std::span<const uint8_t> image)
@@ -402,6 +460,8 @@ namespace gameoverlay::dxgi
         {
             return;
         }
+
+        const auto context = this->get_context();
 
         D3D11_TEXTURE2D_DESC desc{};
         this->texture_->GetDesc(&desc);
@@ -413,10 +473,10 @@ namespace gameoverlay::dxgi
             (desc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE) == D3D11_CPU_ACCESS_WRITE)
         {
             D3D11_MAPPED_SUBRESOURCE texmap{};
-            if (SUCCEEDED(this->context_->Map(this->texture_, 0, D3D11_MAP_WRITE_DISCARD, 0, &texmap)))
+            if (SUCCEEDED(context->Map(this->texture_, 0, D3D11_MAP_WRITE_DISCARD, 0, &texmap)))
             {
                 const auto _ = utils::finally([&] {
-                    this->context_->Unmap(this->texture_, 0); //
+                    context->Unmap(this->texture_, 0); //
                 });
 
                 for (size_t i = 0; i < height; ++i)
@@ -438,35 +498,50 @@ namespace gameoverlay::dxgi
             box.right = this->get_width();
             box.bottom = this->get_height();
 
-            this->context_->UpdateSubresource(this->texture_, 0, &box, image.data(), static_cast<UINT>(row_pitch),
-                                              static_cast<UINT>(image.size()));
+            context->UpdateSubresource(this->texture_, 0, &box, image.data(), static_cast<UINT>(row_pitch),
+                                       static_cast<UINT>(image.size()));
         }
     }
 
     void d3d11_canvas::draw() const
     {
-        context_store _{*this->context_};
+        const auto c = this->get_context();
 
-        auto& c = *this->context_;
+        context_store _{*c};
 
         constexpr UINT stride = sizeof(vertex);
         constexpr UINT offset = 0;
         constexpr float blendFactor[4] = {0.f, 0.f, 0.f, 0.f};
 
-        translate_vertices(*this->vertex_buffer_, 0, 0, ~0UL);
+        D3D11_VIEWPORT view_port = {};
+        view_port.Width = static_cast<FLOAT>(this->get_width());
+        view_port.Height = static_cast<FLOAT>(this->get_height());
+        view_port.MinDepth = 0.0f;
+        view_port.MaxDepth = 1.0f;
+        view_port.TopLeftX = 0;
+        view_port.TopLeftY = 0;
 
-        c.IASetInputLayout(this->input_layout_);
-        c.IASetVertexBuffers(0, 1, &vertex_buffer_.p, &stride, &offset);
-        c.IASetIndexBuffer(this->index_buffer_, DXGI_FORMAT_R32_UINT, 0);
-        c.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        c->RSSetViewports(1, &view_port);
+        c->RSSetState(this->rasterizer_state_);
 
-        c.VSSetShader(this->vertex_shader_, nullptr, 0);
-        c.PSSetShader(this->pixel_shader_, nullptr, 0);
-        c.PSSetShaderResources(0, 1, &shader_resource_view_.p);
-        c.OMSetBlendState(this->blend_state_, blendFactor, 0xffffffff);
-        c.RSSetState(this->rasterizer_state_);
-        c.OMSetDepthStencilState(this->depth_stencil_state_, 1);
+        c->GSSetShader(nullptr, nullptr, 0);
+        c->CSSetShader(nullptr, nullptr, 0);
 
-        c.DrawIndexed(6, 0, 0);
+        c->IASetInputLayout(this->input_layout_);
+        c->IASetVertexBuffers(0, 1, &vertex_buffer_.p, &stride, &offset);
+        c->IASetIndexBuffer(this->index_buffer_, DXGI_FORMAT_R32_UINT, 0);
+        c->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+        c->VSSetShader(this->vertex_shader_, nullptr, 0);
+
+        c->PSSetSamplers(0, 1, &this->sampler_state_.p);
+        c->PSSetShader(this->pixel_shader_, nullptr, 0);
+        c->PSSetShaderResources(0, 1, &shader_resource_view_.p);
+
+        c->OMSetBlendState(this->blend_state_, blendFactor, 0xffffffff);
+        c->OMSetDepthStencilState(this->depth_stencil_state_, 1);
+        c->OMSetRenderTargets(1, &this->render_target_view_.p, nullptr);
+
+        c->DrawIndexed(6, 0, 0);
     }
 }

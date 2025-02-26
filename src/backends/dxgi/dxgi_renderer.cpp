@@ -131,7 +131,7 @@ namespace gameoverlay::dxgi
             case backend_type::d3d10:
                 return create_dxgi_canvas<d3d10_canvas, ID3D10Device>(swap_chain, dim);
             case backend_type::d3d11:
-                return create_dxgi_canvas<d3d11_canvas, ID3D11Device>(swap_chain, dim);
+                return std::make_unique<d3d11_canvas>(swap_chain, dim);
             default: {
                 static const auto x = [] {
                     OutputDebugStringA("Failed to create dxgi canvas");
