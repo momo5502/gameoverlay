@@ -1,4 +1,5 @@
 #include "d3d11_canvas.hpp"
+#include "dxgi_utils.hpp"
 
 #include <cassert>
 #include <stdexcept>
@@ -311,20 +312,18 @@ namespace gameoverlay::dxgi
 
         CComPtr<ID3D11RenderTargetView> create_render_target_view(ID3D11Device& device, IDXGISwapChain& swap_chain)
         {
-            CComPtr<ID3D11Texture2D> back_buffer{};
-            auto res = swap_chain.GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back_buffer));
-
-            if (FAILED(res) || !back_buffer)
+            const auto back_buffer = get_back_buffer<ID3D11Texture2D>(swap_chain);
+            if (!back_buffer)
             {
                 throw std::runtime_error("Failed to get back buffer");
             }
 
             CComPtr<ID3D11RenderTargetView> render_target_view{};
-            res = device.CreateRenderTargetView(back_buffer, nullptr, &render_target_view);
+            const auto res = device.CreateRenderTargetView(back_buffer, nullptr, &render_target_view);
 
-            if (FAILED(res) || !back_buffer)
+            if (FAILED(res) || !render_target_view)
             {
-                throw std::runtime_error("Failed to get back buffer");
+                throw std::runtime_error("Failed to create render target view");
             }
 
             return render_target_view;
@@ -389,18 +388,6 @@ namespace gameoverlay::dxgi
             v[1] = vertex(w2, h1, 0.5f, 1.0f, 0.0f, color);
             v[2] = vertex(w2, h2, 0.5f, 1.0f, 1.0f, color);
             v[3] = vertex(w1, h2, 0.5f, 0.0f, 1.0f, color);
-        }
-
-        template <typename Device>
-        CComPtr<Device> get_device(IDXGISwapChain& swap_chain)
-        {
-            CComPtr<Device> device{};
-            if (FAILED(swap_chain.GetDevice(__uuidof(Device), reinterpret_cast<void**>(&device))))
-            {
-                return {};
-            }
-
-            return device;
         }
     }
 

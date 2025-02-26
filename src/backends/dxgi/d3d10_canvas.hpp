@@ -8,14 +8,16 @@ namespace gameoverlay::dxgi
     class d3d10_canvas : public dxgi_canvas
     {
       public:
-        d3d10_canvas(ID3D10Device& device);
-        d3d10_canvas(ID3D10Device& device, dimensions dim);
+        d3d10_canvas(IDXGISwapChain& swap_chain);
+        d3d10_canvas(IDXGISwapChain& swap_chain, dimensions dim);
 
         void paint(std::span<const uint8_t> image) override;
 
         void draw() const override;
 
       private:
+        CComPtr<IDXGISwapChain> swap_chain_{};
+
         CComPtr<ID3D10Device> device_{};
 
         CComPtr<ID3D10VertexShader> vertex_shader_{};

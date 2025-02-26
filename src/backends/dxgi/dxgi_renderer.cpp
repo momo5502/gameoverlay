@@ -115,21 +115,13 @@ namespace gameoverlay::dxgi
             }
         }
 
-        template <typename Canvas, typename Device>
-            requires(std::is_base_of_v<dxgi_canvas, Canvas>)
-        std::unique_ptr<dxgi_canvas> create_dxgi_canvas(IDXGISwapChain& swap_chain, const dimensions dim)
-        {
-            auto device = get_device<Device>(swap_chain);
-            return std::make_unique<Canvas>(*device, dim);
-        }
-
         std::unique_ptr<dxgi_canvas> create_canvas(IDXGISwapChain& swap_chain, const backend_type type,
                                                    const dimensions dim)
         {
             switch (type)
             {
             case backend_type::d3d10:
-                return create_dxgi_canvas<d3d10_canvas, ID3D10Device>(swap_chain, dim);
+                return std::make_unique<d3d10_canvas>(swap_chain, dim);
             case backend_type::d3d11:
                 return std::make_unique<d3d11_canvas>(swap_chain, dim);
             default: {

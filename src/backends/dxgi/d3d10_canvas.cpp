@@ -1,4 +1,5 @@
 #include "d3d10_canvas.hpp"
+#include "dxgi_utils.hpp"
 
 #include <cassert>
 #include <stdexcept>
@@ -322,7 +323,8 @@ namespace gameoverlay::dxgi
             return shader_resource_view;
         }
 
-        void translate_vertices(ID3D10Buffer& vertex_buffer, const int32_t x, const int32_t y, const COLORREF color)
+        void translate_vertices(ID3D10Buffer& vertex_buffer, const int32_t x, const int32_t y, const COLORREF color,
+                                const dimensions dim)
         {
             CComPtr<ID3D10Device> device{};
             vertex_buffer.GetDevice(&device);
@@ -337,15 +339,11 @@ namespace gameoverlay::dxgi
                 vertex_buffer.Unmap(); //
             });
 
-            UINT num_viewports = 1;
-            D3D10_VIEWPORT viewport{};
-            device->RSGetViewports(&num_viewports, &viewport);
-
             const auto f_x = static_cast<float>(x);
             const auto f_y = static_cast<float>(y);
 
-            const auto f_width = static_cast<float>(viewport.Width);
-            const auto f_height = static_cast<float>(viewport.Height);
+            const auto f_width = static_cast<float>(dim.width);
+            const auto f_height = static_cast<float>(dim.height);
 
             const auto w1 = 2.0f * f_x / f_width - 1.0f;
             const auto w2 = 2.0f * (f_x + f_width) / f_width - 1.0f;
@@ -362,23 +360,27 @@ namespace gameoverlay::dxgi
         }
     }
 
-    d3d10_canvas::d3d10_canvas(ID3D10Device& device)
-        : device_(&device)
+    d3d10_canvas::d3d10_canvas(IDXGISwapChain& swap_chain)
+        : swap_chain_(&swap_chain)
     {
-        CComPtr<ID3DBlob> vs_blob{};
-        this->vertex_shader_ = compile_vertex_shader(device, &vs_blob);
-        this->pixel_shader_ = compile_pixel_shader(device);
-        this->input_layout_ = create_input_layout(device, *vs_blob);
+        this->device_ = get_device<ID3D10Device>(swap_chain);
 
-        this->index_buffer_ = create_index_buffer(device);
-        this->vertex_buffer_ = create_vertex_buffer(device);
-        this->blend_state_ = create_blend_state(device);
-        this->rasterizer_state_ = create_rasterizer_state(device);
-        this->depth_stencil_state_ = create_depth_stencil_state(device);
+        auto& d = *this->device_;
+
+        CComPtr<ID3DBlob> vs_blob{};
+        this->vertex_shader_ = compile_vertex_shader(d, &vs_blob);
+        this->pixel_shader_ = compile_pixel_shader(d);
+        this->input_layout_ = create_input_layout(d, *vs_blob);
+
+        this->index_buffer_ = create_index_buffer(d);
+        this->vertex_buffer_ = create_vertex_buffer(d);
+        this->blend_state_ = create_blend_state(d);
+        this->rasterizer_state_ = create_rasterizer_state(d);
+        this->depth_stencil_state_ = create_depth_stencil_state(d);
     }
 
-    d3d10_canvas::d3d10_canvas(ID3D10Device& device, const dimensions dim)
-        : d3d10_canvas(device)
+    d3d10_canvas::d3d10_canvas(IDXGISwapChain& swap_chain, const dimensions dim)
+        : d3d10_canvas(swap_chain)
     {
         this->resize(dim);
     }
@@ -387,6 +389,8 @@ namespace gameoverlay::dxgi
     {
         this->texture_ = create_texture_2d(*this->device_, new_dimensions, DXGI_FORMAT_R8G8B8A8_UNORM);
         this->shader_resource_view_ = create_shader_resource_view(*this->texture_);
+
+        translate_vertices(*this->vertex_buffer_, 0, 0, ~0UL, new_dimensions);
     }
 
     void d3d10_canvas::paint(const std::span<const uint8_t> image)
@@ -439,8 +443,6 @@ namespace gameoverlay::dxgi
         constexpr UINT offset = 0;
         constexpr UINT stride = sizeof(vertex);
         constexpr float blendFactor[4] = {0.f, 0.f, 0.f, 0.f};
-
-        translate_vertices(*this->vertex_buffer_, 0, 0, ~0UL);
 
         d.OMSetBlendState(this->blend_state_, blendFactor, 0xffffffff);
         d.RSSetState(this->rasterizer_state_);
