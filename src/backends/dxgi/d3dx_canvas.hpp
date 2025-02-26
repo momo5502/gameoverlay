@@ -331,46 +331,24 @@ namespace gameoverlay::dxgi
             return depth_stencil_state;
         }
 
-        inline CComPtr<ID3D11Texture2D> create_texture_2d(ID3D11Device& device, const dimensions dim,
-                                                          const DXGI_FORMAT format)
+        template <typename Device>
+        CComPtr<typename d3dx_traits<Device>::texture2d> create_texture_2d(Device& device, const dimensions dim,
+                                                                           const DXGI_FORMAT format)
         {
-            D3D11_TEXTURE2D_DESC desc{};
+            using traits = d3dx_traits<Device>;
+
+            typename traits::texture2d_desc desc{};
             desc.Width = dim.width;
             desc.Height = dim.height;
             desc.MipLevels = desc.ArraySize = 1;
             desc.Format = format;
             desc.SampleDesc.Count = 1;
-            desc.Usage = D3D11_USAGE_DYNAMIC;
-            desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-            desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+            desc.Usage = traits::USAGE_DYNAMIC;
+            desc.BindFlags = traits::BIND_SHADER_RESOURCE;
+            desc.CPUAccessFlags = traits::CPU_ACCESS_WRITE;
             desc.MiscFlags = 0;
 
-            CComPtr<ID3D11Texture2D> texture{};
-            const auto res = device.CreateTexture2D(&desc, nullptr, &texture);
-
-            if (FAILED(res) || !texture)
-            {
-                throw std::runtime_error("Failed to create texture");
-            }
-
-            return texture;
-        }
-
-        inline CComPtr<ID3D10Texture2D> create_texture_2d(ID3D10Device& device, const dimensions dim,
-                                                          const DXGI_FORMAT format)
-        {
-            D3D10_TEXTURE2D_DESC desc{};
-            desc.Width = dim.width;
-            desc.Height = dim.height;
-            desc.MipLevels = desc.ArraySize = 1;
-            desc.Format = format;
-            desc.SampleDesc.Count = 1;
-            desc.Usage = D3D10_USAGE_DYNAMIC;
-            desc.BindFlags = D3D10_BIND_SHADER_RESOURCE;
-            desc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
-            desc.MiscFlags = 0;
-
-            CComPtr<ID3D10Texture2D> texture{};
+            CComPtr<typename traits::texture2d> texture{};
             const auto res = device.CreateTexture2D(&desc, nullptr, &texture);
 
             if (FAILED(res) || !texture)
@@ -818,7 +796,7 @@ namespace gameoverlay::dxgi
         CComPtr<typename traits::rasterizer_state> rasterizer_state_{};
         CComPtr<typename traits::depth_stencil_state> depth_stencil_state_{};
 
-        CComPtr<typename traits::texture> texture_{};
+        CComPtr<typename traits::texture2d> texture_{};
         CComPtr<typename traits::shader_resource_view> shader_resource_view_{};
 
         void resize_texture(const dimensions new_dimensions) override

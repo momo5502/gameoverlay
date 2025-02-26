@@ -10,7 +10,7 @@ namespace gameoverlay::dxgi
     {
         using device = ID3D10Device;
         using context = ID3D10Device;
-        using texture = ID3D10Texture2D;
+        using texture2d = ID3D10Texture2D;
         using buffer = ID3D10Buffer;
 
         using vertex_shader = ID3D10VertexShader;
@@ -39,6 +39,7 @@ namespace gameoverlay::dxgi
         static constexpr auto USAGE_DYNAMIC = D3D10_USAGE_DYNAMIC;
         static constexpr auto BIND_INDEX_BUFFER = D3D10_BIND_INDEX_BUFFER;
         static constexpr auto BIND_VERTEX_BUFFER = D3D10_BIND_VERTEX_BUFFER;
+        static constexpr auto BIND_SHADER_RESOURCE = D3D10_BIND_SHADER_RESOURCE;
         static constexpr auto CPU_ACCESS_WRITE = D3D10_CPU_ACCESS_WRITE;
         static constexpr auto DEPTH_WRITE_MASK_ALL = D3D10_DEPTH_WRITE_MASK_ALL;
         static constexpr auto COMPARISON_ALWAYS = D3D10_COMPARISON_ALWAYS;
@@ -50,7 +51,7 @@ namespace gameoverlay::dxgi
     {
         using device = ID3D11Device;
         using context = ID3D11Device;
-        using texture = ID3D11Texture2D;
+        using texture2d = ID3D11Texture2D;
         using buffer = ID3D11Buffer;
 
         using vertex_shader = ID3D11VertexShader;
@@ -79,6 +80,7 @@ namespace gameoverlay::dxgi
         static constexpr auto USAGE_DYNAMIC = D3D11_USAGE_DYNAMIC;
         static constexpr auto BIND_INDEX_BUFFER = D3D11_BIND_INDEX_BUFFER;
         static constexpr auto BIND_VERTEX_BUFFER = D3D11_BIND_VERTEX_BUFFER;
+        static constexpr auto BIND_SHADER_RESOURCE = D3D11_BIND_SHADER_RESOURCE;
         static constexpr auto CPU_ACCESS_WRITE = D3D11_CPU_ACCESS_WRITE;
         static constexpr auto DEPTH_WRITE_MASK_ALL = D3D11_DEPTH_WRITE_MASK_ALL;
         static constexpr auto COMPARISON_ALWAYS = D3D11_COMPARISON_ALWAYS;
