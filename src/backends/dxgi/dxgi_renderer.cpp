@@ -1,57 +1,15 @@
 #include "dxgi_renderer.hpp"
+#include "dxgi_utils.hpp"
 
-#include "d3d10_canvas.hpp"
-#include "d3d11_canvas.hpp"
+#include "d3dx_canvas.hpp"
 
 namespace gameoverlay::dxgi
 {
     namespace
     {
-        template <typename Device>
-        CComPtr<Device> get_device(IDXGISwapChain& swap_chain)
-        {
-            CComPtr<Device> device{};
-            if (FAILED(swap_chain.GetDevice(__uuidof(Device), reinterpret_cast<void**>(&device))))
-            {
-                return {};
-            }
-
-            return device;
-        }
-
-        HWND get_swap_chain_window(IDXGISwapChain& swap_chain)
-        {
-            DXGI_SWAP_CHAIN_DESC desc{};
-            if (FAILED(swap_chain.GetDesc(&desc)))
-            {
-                return {};
-            }
-
-            return desc.OutputWindow;
-        }
-
-        template <typename Texture, typename Description>
-        dimensions get_swap_chain_dimensions(IDXGISwapChain& swap_chain)
-        {
-            CComPtr<Texture> back_buffer{};
-            HRESULT hr = swap_chain.GetBuffer(0, __uuidof(Texture), reinterpret_cast<void**>(&back_buffer));
-            if (FAILED(hr) || !back_buffer)
-            {
-                return {};
-            }
-
-            Description desc{};
-            back_buffer->GetDesc(&desc);
-
-            return {
-                desc.Width,
-                desc.Height,
-            };
-        }
-
         dimensions get_d3d10_dimensions(IDXGISwapChain& swap_chain)
         {
-            const auto swap_chain_dim = get_swap_chain_dimensions<ID3D10Texture2D, D3D10_TEXTURE2D_DESC>(swap_chain);
+            const auto swap_chain_dim = get_swap_chain_dimensions<ID3D10Texture2D>(swap_chain);
             if (!swap_chain_dim.is_zero())
             {
                 return swap_chain_dim;
@@ -76,7 +34,7 @@ namespace gameoverlay::dxgi
 
         dimensions get_d3d11_dimensions(IDXGISwapChain& swap_chain)
         {
-            const auto swap_chain_dim = get_swap_chain_dimensions<ID3D11Texture2D, D3D11_TEXTURE2D_DESC>(swap_chain);
+            const auto swap_chain_dim = get_swap_chain_dimensions<ID3D11Texture2D>(swap_chain);
             if (!swap_chain_dim.is_zero())
             {
                 return swap_chain_dim;
@@ -121,9 +79,9 @@ namespace gameoverlay::dxgi
             switch (type)
             {
             case backend_type::d3d10:
-                return std::make_unique<d3d10_canvas>(swap_chain, dim);
+                return std::make_unique<d3dx_canvas<d3d10_traits>>(swap_chain, dim);
             case backend_type::d3d11:
-                return std::make_unique<d3d11_canvas>(swap_chain, dim);
+                return std::make_unique<d3dx_canvas<d3d11_traits>>(swap_chain, dim);
             default: {
                 static const auto x = [] {
                     OutputDebugStringA("Failed to create dxgi canvas");
