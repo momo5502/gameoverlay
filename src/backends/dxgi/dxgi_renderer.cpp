@@ -82,15 +82,8 @@ namespace gameoverlay::dxgi
                 return std::make_unique<d3dx_canvas<d3d10_traits>>(swap_chain, dim);
             case backend_type::d3d11:
                 return std::make_unique<d3dx_canvas<d3d11_traits>>(swap_chain, dim);
-            default: {
-                static const auto x = [] {
-                    OutputDebugStringA("Failed to create dxgi canvas");
-                    return 0;
-                }();
-                (void)x;
-
-                return {};
-            }
+            default:
+                throw std::runtime_error("Failed to create dxgi canvas");
             }
         }
     }
@@ -137,7 +130,21 @@ namespace gameoverlay::dxgi
 
         if (!this->canvas_)
         {
-            this->canvas_ = create_canvas(*this->swap_chain_, this->type_, dim);
+            if (this->canvas_failed_)
+            {
+                return;
+            }
+
+            try
+            {
+                this->canvas_ = create_canvas(*this->swap_chain_, this->type_, dim);
+                this->canvas_failed_ = false;
+            }
+            catch (const std::exception& e)
+            {
+                this->canvas_failed_ = true;
+                OutputDebugStringA(e.what());
+            }
         }
 
         if (!this->canvas_)

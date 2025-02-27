@@ -18,6 +18,7 @@ namespace gameoverlay::dxgi
         backend_type get_backend_type() const override;
 
       private:
+        bool canvas_failed_{false};
         HWND window_{};
         backend_type type_{backend_type::dxgi};
 
