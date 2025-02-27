@@ -652,6 +652,11 @@ namespace gameoverlay::dxgi
 
         void draw() const override
         {
+            if (!this->texture_)
+            {
+                return;
+            }
+
             const auto c = get_context(*this->device_);
 
             detail::context_store _{*c};
