@@ -263,7 +263,7 @@ namespace gameoverlay::dxgi
             return index_buffer;
         }
 
-        void fill_bend_desc(D3D10_BLEND_DESC& blend_desc)
+        inline void fill_bend_desc(D3D10_BLEND_DESC& blend_desc)
         {
             blend_desc.BlendEnable[0] = TRUE;
             blend_desc.SrcBlend = D3D10_BLEND_SRC_ALPHA;
@@ -275,7 +275,7 @@ namespace gameoverlay::dxgi
             blend_desc.RenderTargetWriteMask[0] = D3D10_COLOR_WRITE_ENABLE_ALL;
         }
 
-        void fill_bend_desc(D3D11_BLEND_DESC& blend_desc)
+        inline void fill_bend_desc(D3D11_BLEND_DESC& blend_desc)
         {
             blend_desc.RenderTarget[0].BlendEnable = TRUE;
             blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
@@ -490,6 +490,44 @@ namespace gameoverlay::dxgi
             accessor(mapped_data.pData);
         }
 
+        template <typename Accessor>
+        void access_texture(ID3D10Texture2D& texture, const Accessor& accessor)
+        {
+            D3D10_MAPPED_TEXTURE2D texmap{};
+            if (FAILED(texture.Map(0, D3D10_MAP_WRITE_DISCARD, 0, &texmap)))
+            {
+                return;
+            }
+
+            const auto _ = utils::finally([&] {
+                texture.Unmap(0); //
+            });
+
+            accessor(texmap.pData, texmap.RowPitch);
+        }
+
+        template <typename Accessor>
+        void access_texture(ID3D11Texture2D& texture, const Accessor& accessor)
+        {
+            CComPtr<ID3D11Device> device{};
+            texture.GetDevice(&device);
+
+            CComPtr<ID3D11DeviceContext> context{};
+            device->GetImmediateContext(&context);
+
+            D3D11_MAPPED_SUBRESOURCE texmap{};
+            if (FAILED(context->Map(&texture, 0, D3D11_MAP_WRITE_DISCARD, 0, &texmap)))
+            {
+                return;
+            }
+
+            const auto _ = utils::finally([&] {
+                context->Unmap(&texture, 0); //
+            });
+
+            accessor(texmap.pData, texmap.RowPitch);
+        }
+
         template <typename Buffer>
         void translate_vertices(Buffer& vertex_buffer, const int32_t x, const int32_t y, const COLORREF color,
                                 const dimensions dim)
@@ -514,6 +552,22 @@ namespace gameoverlay::dxgi
                 v[2] = vertex(w2, h2, 0.5f, 1.0f, 1.0f, color);
                 v[3] = vertex(w1, h2, 0.5f, 0.0f, 1.0f, color);
             });
+        }
+
+        inline void apply_shaders(ID3D10Device& c, ID3D10VertexShader& vertex_shader, ID3D10PixelShader& pixel_shader)
+        {
+            c.GSSetShader(nullptr);
+            c.VSSetShader(&vertex_shader);
+            c.PSSetShader(&pixel_shader);
+        }
+
+        inline void apply_shaders(ID3D11DeviceContext& c, ID3D11VertexShader& vertex_shader,
+                                  ID3D11PixelShader& pixel_shader)
+        {
+            c.GSSetShader(nullptr, nullptr, 0);
+            c.CSSetShader(nullptr, nullptr, 0);
+            c.VSSetShader(&vertex_shader, nullptr, 0);
+            c.PSSetShader(&pixel_shader, nullptr, 0);
         }
     }
 
@@ -559,83 +613,40 @@ namespace gameoverlay::dxgi
                 return;
             }
 
-            if constexpr (std::is_same_v<typename traits::device, ID3D11Device>)
+            const auto context = get_context(*this->device_);
+
+            typename traits::texture2d_desc desc{};
+            this->texture_->GetDesc(&desc);
+
+            const auto height = this->get_height();
+            const auto row_pitch = image.size() / height;
+
+            if (desc.Usage == traits::USAGE_DYNAMIC &&
+                (desc.CPUAccessFlags & traits::CPU_ACCESS_WRITE) == traits::CPU_ACCESS_WRITE)
             {
-                const auto context = get_context(*this->device_);
-
-                typename traits::texture2d_desc desc{};
-                this->texture_->GetDesc(&desc);
-
-                const auto height = this->get_height();
-                const auto row_pitch = image.size() / height;
-
-                if (desc.Usage == D3D11_USAGE_DYNAMIC &&
-                    (desc.CPUAccessFlags & D3D11_CPU_ACCESS_WRITE) == D3D11_CPU_ACCESS_WRITE)
-                {
-                    D3D11_MAPPED_SUBRESOURCE texmap{};
-                    if (SUCCEEDED(context->Map(this->texture_, 0, D3D11_MAP_WRITE_DISCARD, 0, &texmap)))
+                detail::access_texture(*this->texture_, [&](void* data, const uint32_t tex_row_pitch) {
+                    for (size_t i = 0; i < height; ++i)
                     {
-                        const auto _ = utils::finally([&] {
-                            context->Unmap(this->texture_, 0); //
-                        });
+                        auto* src = image.data() + (i * row_pitch);
+                        auto* dest = static_cast<uint8_t*>(data) + (i * tex_row_pitch);
 
-                        for (size_t i = 0; i < height; ++i)
-                        {
-                            auto* src = image.data() + (i * row_pitch);
-                            auto* dest = static_cast<uint8_t*>(texmap.pData) + (i * texmap.RowPitch);
-
-                            std::memcpy(dest, src, row_pitch);
-                        }
+                        std::memcpy(dest, src, row_pitch);
                     }
-                }
-                else if (desc.Usage == D3D11_USAGE_DEFAULT)
-                {
-                    D3D11_BOX box{};
-                    box.top = 0;
-                    box.left = 0;
-                    box.front = 0;
-                    box.back = 1;
-                    box.right = this->get_width();
-                    box.bottom = this->get_height();
-
-                    context->UpdateSubresource(this->texture_, 0, &box, image.data(), static_cast<UINT>(row_pitch),
-                                               static_cast<UINT>(image.size()));
-                }
+                });
             }
-            else
+            else if (desc.Usage == traits::USAGE_DEFAULT)
             {
-                D3D10_TEXTURE2D_DESC desc{};
-                this->texture_->GetDesc(&desc);
+                typename traits::box box{};
+                box.top = 0;
+                box.left = 0;
+                box.front = 0;
+                box.back = 1;
+                box.right = this->get_width();
+                box.bottom = this->get_height();
 
-                const auto row_pitch = image.size() / this->get_height();
-
-                if (desc.Usage == D3D10_USAGE_DYNAMIC &&
-                    (desc.CPUAccessFlags & D3D10_CPU_ACCESS_WRITE) == D3D10_CPU_ACCESS_WRITE)
-                {
-                    D3D10_MAPPED_TEXTURE2D texmap{};
-                    if (SUCCEEDED(this->texture_->Map(0, D3D10_MAP_WRITE_DISCARD, 0, &texmap)))
-                    {
-                        const auto _ = utils::finally([&] {
-                            this->texture_->Unmap(0); //
-                        });
-
-                        assert(texmap.RowPitch == row_pitch);
-                        std::memcpy(texmap.pData, image.data(), image.size());
-                    }
-                }
-                else if (desc.Usage == D3D10_USAGE_DEFAULT)
-                {
-                    D3D10_BOX box{};
-                    box.top = 0;
-                    box.left = 0;
-                    box.front = 0;
-                    box.back = 1;
-                    box.right = this->get_width();
-                    box.bottom = this->get_height();
-
-                    this->device_->UpdateSubresource(this->texture_, 0, &box, image.data(),
-                                                     static_cast<UINT>(row_pitch), static_cast<UINT>(image.size()));
-                }
+                get_context(*this->device_)
+                    ->UpdateSubresource(this->texture_, 0, &box, image.data(), static_cast<UINT>(row_pitch),
+                                        static_cast<UINT>(image.size()));
             }
         }
 
@@ -665,20 +676,7 @@ namespace gameoverlay::dxgi
             c->IASetIndexBuffer(this->index_buffer_, DXGI_FORMAT_R32_UINT, 0);
             c->IASetPrimitiveTopology(traits::PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-            if constexpr (std::is_same_v<typename traits::device, ID3D11Device>)
-            {
-                c->GSSetShader(nullptr, nullptr, 0);
-                c->CSSetShader(nullptr, nullptr, 0);
-                c->VSSetShader(this->vertex_shader_, nullptr, 0);
-                c->PSSetShader(this->pixel_shader_, nullptr, 0);
-            }
-            else
-            {
-                c->GSSetShader(nullptr);
-                //  c->CSSetShader(nullptr);
-                c->VSSetShader(this->vertex_shader_);
-                c->PSSetShader(this->pixel_shader_);
-            }
+            detail::apply_shaders(*c, *this->vertex_shader_, *this->pixel_shader_);
 
             c->PSSetSamplers(0, 1, &this->sampler_state_.p);
             c->PSSetShaderResources(0, 1, &shader_resource_view_.p);

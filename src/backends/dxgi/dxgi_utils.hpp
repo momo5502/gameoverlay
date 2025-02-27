@@ -25,6 +25,8 @@ namespace gameoverlay::dxgi
         using render_target_view = ID3D10RenderTargetView;
         using shader_resource_view = ID3D10ShaderResourceView;
 
+        using box = D3D10_BOX;
+
         using blend_desc = D3D10_BLEND_DESC;
         using buffer_desc = D3D10_BUFFER_DESC;
         using sampler_desc = D3D10_SAMPLER_DESC;
@@ -75,6 +77,8 @@ namespace gameoverlay::dxgi
 
         using render_target_view = ID3D11RenderTargetView;
         using shader_resource_view = ID3D11ShaderResourceView;
+
+        using box = D3D11_BOX;
 
         using blend_desc = D3D11_BLEND_DESC;
         using buffer_desc = D3D11_BUFFER_DESC;
