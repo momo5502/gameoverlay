@@ -263,32 +263,8 @@ namespace gameoverlay::dxgi
             return index_buffer;
         }
 
-        inline CComPtr<ID3D11BlendState> create_blend_state(ID3D11Device& device)
+        void fill_bend_desc(D3D10_BLEND_DESC& blend_desc)
         {
-            D3D11_BLEND_DESC blend_desc{};
-            blend_desc.RenderTarget[0].BlendEnable = TRUE;
-            blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-            blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-            blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-            blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-            blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-            blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-            blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-
-            CComPtr<ID3D11BlendState> blend_state{};
-            const auto res = device.CreateBlendState(&blend_desc, &blend_state);
-
-            if (FAILED(res) || !blend_state)
-            {
-                throw std::runtime_error("Failed to create blend state");
-            }
-
-            return blend_state;
-        }
-
-        inline CComPtr<ID3D10BlendState> create_blend_state(ID3D10Device& device)
-        {
-            D3D10_BLEND_DESC blend_desc{};
             blend_desc.BlendEnable[0] = TRUE;
             blend_desc.SrcBlend = D3D10_BLEND_SRC_ALPHA;
             blend_desc.DestBlend = D3D10_BLEND_INV_SRC_ALPHA;
@@ -297,8 +273,29 @@ namespace gameoverlay::dxgi
             blend_desc.DestBlendAlpha = D3D10_BLEND_ZERO;
             blend_desc.BlendOpAlpha = D3D10_BLEND_OP_ADD;
             blend_desc.RenderTargetWriteMask[0] = D3D10_COLOR_WRITE_ENABLE_ALL;
+        }
 
-            CComPtr<ID3D10BlendState> blend_state{};
+        void fill_bend_desc(D3D11_BLEND_DESC& blend_desc)
+        {
+            blend_desc.RenderTarget[0].BlendEnable = TRUE;
+            blend_desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+            blend_desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+            blend_desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+            blend_desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+            blend_desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+            blend_desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+            blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+        }
+
+        template <typename Device>
+        CComPtr<typename d3dx_traits<Device>::blend_state> create_blend_state(Device& device)
+        {
+            using traits = d3dx_traits<Device>;
+
+            typename traits::blend_desc blend_desc{};
+            fill_bend_desc(blend_desc);
+
+            CComPtr<typename traits::blend_state> blend_state{};
             const auto res = device.CreateBlendState(&blend_desc, &blend_state);
 
             if (FAILED(res) || !blend_state)
@@ -359,21 +356,24 @@ namespace gameoverlay::dxgi
             return texture;
         }
 
-        inline CComPtr<ID3D11ShaderResourceView> create_shader_resource_view(ID3D11Texture2D& texture)
+        template <typename Texture>
+        CComPtr<typename d3dx_traits<Texture>::shader_resource_view> create_shader_resource_view(Texture& texture)
         {
-            CComPtr<ID3D11Device> device{};
+            using traits = d3dx_traits<Texture>;
+
+            CComPtr<typename traits::device> device{};
             texture.GetDevice(&device);
 
-            D3D11_TEXTURE2D_DESC desc{};
+            typename traits::texture2d_desc desc{};
             texture.GetDesc(&desc);
 
-            D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+            typename traits::shader_resource_view_desc srv_desc{};
             srv_desc.Format = desc.Format;
-            srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+            srv_desc.ViewDimension = traits::SRV_DIMENSION_TEXTURE2D;
             srv_desc.Texture2D.MipLevels = 1;
             srv_desc.Texture2D.MostDetailedMip = 0;
 
-            CComPtr<ID3D11ShaderResourceView> shader_resource_view{};
+            CComPtr<typename traits::shader_resource_view> shader_resource_view{};
             const auto res = device->CreateShaderResourceView(&texture, &srv_desc, &shader_resource_view);
 
             if (FAILED(res) || !shader_resource_view)
@@ -384,39 +384,17 @@ namespace gameoverlay::dxgi
             return shader_resource_view;
         }
 
-        inline CComPtr<ID3D10ShaderResourceView> create_shader_resource_view(ID3D10Texture2D& texture)
+        template <typename Device>
+        CComPtr<typename d3dx_traits<Device>::rasterizer_state> create_rasterizer_state(Device& device)
         {
-            CComPtr<ID3D10Device> device{};
-            texture.GetDevice(&device);
+            using traits = d3dx_traits<Device>;
 
-            D3D10_TEXTURE2D_DESC desc{};
-            texture.GetDesc(&desc);
-
-            D3D10_SHADER_RESOURCE_VIEW_DESC srv_desc{};
-            srv_desc.Format = desc.Format;
-            srv_desc.ViewDimension = D3D10_SRV_DIMENSION_TEXTURE2D;
-            srv_desc.Texture2D.MipLevels = 1;
-            srv_desc.Texture2D.MostDetailedMip = 0;
-
-            CComPtr<ID3D10ShaderResourceView> shader_resource_view{};
-            const auto res = device->CreateShaderResourceView(&texture, &srv_desc, &shader_resource_view);
-
-            if (FAILED(res) || !shader_resource_view)
-            {
-                throw std::runtime_error("Failed to create shader resource view");
-            }
-
-            return shader_resource_view;
-        }
-
-        inline CComPtr<ID3D11RasterizerState> create_rasterizer_state(ID3D11Device& device)
-        {
-            D3D11_RASTERIZER_DESC rasterizer_desc{};
-            rasterizer_desc.FillMode = D3D11_FILL_SOLID;
-            rasterizer_desc.CullMode = D3D11_CULL_NONE;
+            typename traits::rasterizer_desc rasterizer_desc{};
+            rasterizer_desc.FillMode = traits::FILL_SOLID;
+            rasterizer_desc.CullMode = traits::CULL_NONE;
             rasterizer_desc.FrontCounterClockwise = TRUE;
 
-            CComPtr<ID3D11RasterizerState> rasterizer_state{};
+            CComPtr<typename traits::rasterizer_state> rasterizer_state{};
             const auto res = device.CreateRasterizerState(&rasterizer_desc, &rasterizer_state);
 
             if (FAILED(res) || !rasterizer_state)
@@ -427,34 +405,19 @@ namespace gameoverlay::dxgi
             return rasterizer_state;
         }
 
-        inline CComPtr<ID3D10RasterizerState> create_rasterizer_state(ID3D10Device& device)
+        template <typename Device>
+        CComPtr<typename d3dx_traits<Device>::render_target_view> create_render_target_view(Device& device,
+                                                                                            IDXGISwapChain& swap_chain)
         {
-            D3D10_RASTERIZER_DESC rasterizer_desc{};
-            rasterizer_desc.FillMode = D3D10_FILL_SOLID;
-            rasterizer_desc.CullMode = D3D10_CULL_NONE;
-            rasterizer_desc.FrontCounterClockwise = TRUE;
+            using traits = d3dx_traits<Device>;
 
-            CComPtr<ID3D10RasterizerState> rasterizer_state{};
-            const auto res = device.CreateRasterizerState(&rasterizer_desc, &rasterizer_state);
-
-            if (FAILED(res) || !rasterizer_state)
-            {
-                throw std::runtime_error("Failed to create rasterizer state");
-            }
-
-            return rasterizer_state;
-        }
-
-        inline CComPtr<ID3D11RenderTargetView> create_render_target_view(ID3D11Device& device,
-                                                                         IDXGISwapChain& swap_chain)
-        {
-            const auto back_buffer = get_back_buffer<ID3D11Texture2D>(swap_chain);
+            const auto back_buffer = get_back_buffer<typename traits::texture2d>(swap_chain);
             if (!back_buffer)
             {
                 throw std::runtime_error("Failed to get back buffer");
             }
 
-            CComPtr<ID3D11RenderTargetView> render_target_view{};
+            CComPtr<typename traits::render_target_view> render_target_view{};
             const auto res = device.CreateRenderTargetView(back_buffer, nullptr, &render_target_view);
 
             if (FAILED(res) || !render_target_view)
@@ -465,38 +428,21 @@ namespace gameoverlay::dxgi
             return render_target_view;
         }
 
-        inline CComPtr<ID3D10RenderTargetView> create_render_target_view(ID3D10Device& device,
-                                                                         IDXGISwapChain& swap_chain)
+        template <typename Device>
+        CComPtr<typename d3dx_traits<Device>::sampler_state> create_sampler_state(Device& device)
         {
-            const auto back_buffer = get_back_buffer<ID3D10Texture2D>(swap_chain);
-            if (!back_buffer)
-            {
-                throw std::runtime_error("Failed to get back buffer");
-            }
+            using traits = d3dx_traits<Device>;
 
-            CComPtr<ID3D10RenderTargetView> render_target_view{};
-            const auto res = device.CreateRenderTargetView(back_buffer, nullptr, &render_target_view);
-
-            if (FAILED(res) || !render_target_view)
-            {
-                throw std::runtime_error("Failed to create render target view");
-            }
-
-            return render_target_view;
-        }
-
-        inline CComPtr<ID3D11SamplerState> create_sampler_state(ID3D11Device& device)
-        {
-            D3D11_SAMPLER_DESC sampler_desc{};
-            sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-            sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-            sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-            sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-            sampler_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+            typename traits::sampler_desc sampler_desc{};
+            sampler_desc.Filter = traits::FILTER_MIN_MAG_MIP_LINEAR;
+            sampler_desc.AddressU = traits::TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.AddressV = traits::TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.AddressW = traits::TEXTURE_ADDRESS_CLAMP;
+            sampler_desc.ComparisonFunc = traits::COMPARISON_NEVER;
             sampler_desc.MinLOD = 0;
-            sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+            sampler_desc.MaxLOD = traits::FLOAT32_MAX;
 
-            CComPtr<ID3D11SamplerState> sampler_state{};
+            CComPtr<typename traits::sampler_state> sampler_state{};
             const auto res = device.CreateSamplerState(&sampler_desc, &sampler_state);
 
             if (FAILED(res) || !sampler_state)
@@ -507,83 +453,47 @@ namespace gameoverlay::dxgi
             return sampler_state;
         }
 
-        inline CComPtr<ID3D10SamplerState> create_sampler_state(ID3D10Device& device)
+        template <typename Accessor>
+        void access_buffer(ID3D10Buffer& buffer, const Accessor& accessor)
         {
-            D3D10_SAMPLER_DESC sampler_desc{};
-            sampler_desc.Filter = D3D10_FILTER_MIN_MAG_MIP_LINEAR;
-            sampler_desc.AddressU = D3D10_TEXTURE_ADDRESS_CLAMP;
-            sampler_desc.AddressV = D3D10_TEXTURE_ADDRESS_CLAMP;
-            sampler_desc.AddressW = D3D10_TEXTURE_ADDRESS_CLAMP;
-            sampler_desc.ComparisonFunc = D3D10_COMPARISON_NEVER;
-            sampler_desc.MinLOD = 0;
-            sampler_desc.MaxLOD = D3D10_FLOAT32_MAX;
-
-            CComPtr<ID3D10SamplerState> sampler_state{};
-            const auto res = device.CreateSamplerState(&sampler_desc, &sampler_state);
-
-            if (FAILED(res) || !sampler_state)
+            void* mapped_data{};
+            if (FAILED(buffer.Map(D3D10_MAP_WRITE_DISCARD, 0, &mapped_data)))
             {
-                throw std::runtime_error("Failed to create sampler state");
+                return;
             }
 
-            return sampler_state;
+            const auto _ = utils::finally([&] {
+                buffer.Unmap(); //
+            });
+
+            accessor(mapped_data);
         }
 
-        inline void translate_vertices(ID3D11Buffer& vertex_buffer, const int32_t x, const int32_t y,
-                                       const COLORREF color, const dimensions dim)
+        template <typename Accessor>
+        void access_buffer(ID3D11Buffer& buffer, const Accessor& accessor)
         {
             CComPtr<ID3D11Device> device{};
-            vertex_buffer.GetDevice(&device);
+            buffer.GetDevice(&device);
 
             CComPtr<ID3D11DeviceContext> context{};
             device->GetImmediateContext(&context);
 
             D3D11_MAPPED_SUBRESOURCE mapped_data{};
-            if (FAILED(context->Map(&vertex_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_data)))
+            if (FAILED(context->Map(&buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_data)))
             {
                 return;
             }
 
             const auto _ = utils::finally([&] {
-                context->Unmap(&vertex_buffer, 0); //
+                context->Unmap(&buffer, 0); //
             });
-
-            const auto f_x = static_cast<float>(x);
-            const auto f_y = static_cast<float>(y);
-
-            const auto f_width = static_cast<float>(dim.width);
-            const auto f_height = static_cast<float>(dim.height);
-
-            const auto w1 = 2.0f * f_x / f_width - 1.0f;
-            const auto w2 = 2.0f * (f_x + f_width) / f_width - 1.0f;
-
-            const auto h1 = 1.0f - 2.0f * f_y / f_height;
-            const auto h2 = 1.0f - 2.0f * (f_y + f_height) / f_height;
-
-            auto* v = static_cast<vertex*>(mapped_data.pData);
-
-            v[0] = vertex(w1, h1, 0.5f, 0.0f, 0.0f, color);
-            v[1] = vertex(w2, h1, 0.5f, 1.0f, 0.0f, color);
-            v[2] = vertex(w2, h2, 0.5f, 1.0f, 1.0f, color);
-            v[3] = vertex(w1, h2, 0.5f, 0.0f, 1.0f, color);
+            accessor(mapped_data.pData);
         }
 
-        inline void translate_vertices(ID3D10Buffer& vertex_buffer, const int32_t x, const int32_t y,
-                                       const COLORREF color, const dimensions dim)
+        template <typename Buffer>
+        void translate_vertices(Buffer& vertex_buffer, const int32_t x, const int32_t y, const COLORREF color,
+                                const dimensions dim)
         {
-            CComPtr<ID3D10Device> device{};
-            vertex_buffer.GetDevice(&device);
-
-            void* mapped_data{};
-            if (FAILED(vertex_buffer.Map(D3D10_MAP_WRITE_DISCARD, 0, &mapped_data)))
-            {
-                return;
-            }
-
-            const auto _ = utils::finally([&] {
-                vertex_buffer.Unmap(); //
-            });
-
             const auto f_x = static_cast<float>(x);
             const auto f_y = static_cast<float>(y);
 
@@ -596,12 +506,14 @@ namespace gameoverlay::dxgi
             const auto h1 = 1.0f - 2.0f * f_y / f_height;
             const auto h2 = 1.0f - 2.0f * (f_y + f_height) / f_height;
 
-            auto* v = static_cast<vertex*>(mapped_data);
+            access_buffer(vertex_buffer, [&](void* data) {
+                auto* v = static_cast<vertex*>(data);
 
-            v[0] = vertex(w1, h1, 0.5f, 0.0f, 0.0f, color);
-            v[1] = vertex(w2, h1, 0.5f, 1.0f, 0.0f, color);
-            v[2] = vertex(w2, h2, 0.5f, 1.0f, 1.0f, color);
-            v[3] = vertex(w1, h2, 0.5f, 0.0f, 1.0f, color);
+                v[0] = vertex(w1, h1, 0.5f, 0.0f, 0.0f, color);
+                v[1] = vertex(w2, h1, 0.5f, 1.0f, 0.0f, color);
+                v[2] = vertex(w2, h2, 0.5f, 1.0f, 1.0f, color);
+                v[3] = vertex(w1, h2, 0.5f, 0.0f, 1.0f, color);
+            });
         }
     }
 

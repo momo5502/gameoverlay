@@ -25,10 +25,14 @@ namespace gameoverlay::dxgi
         using render_target_view = ID3D10RenderTargetView;
         using shader_resource_view = ID3D10ShaderResourceView;
 
+        using blend_desc = D3D10_BLEND_DESC;
         using buffer_desc = D3D10_BUFFER_DESC;
+        using sampler_desc = D3D10_SAMPLER_DESC;
         using input_element_desc = D3D10_INPUT_ELEMENT_DESC;
         using depth_stencil_desc = D3D10_DEPTH_STENCIL_DESC;
         using texture2d_desc = D3D10_TEXTURE2D_DESC;
+        using rasterizer_desc = D3D10_RASTERIZER_DESC;
+        using shader_resource_view_desc = D3D10_SHADER_RESOURCE_VIEW_DESC;
 
         using subresource_data = D3D10_SUBRESOURCE_DATA;
 
@@ -43,8 +47,14 @@ namespace gameoverlay::dxgi
         static constexpr auto CPU_ACCESS_WRITE = D3D10_CPU_ACCESS_WRITE;
         static constexpr auto DEPTH_WRITE_MASK_ALL = D3D10_DEPTH_WRITE_MASK_ALL;
         static constexpr auto COMPARISON_ALWAYS = D3D10_COMPARISON_ALWAYS;
-
+        static constexpr auto COMPARISON_NEVER = D3D10_COMPARISON_NEVER;
+        static constexpr auto CULL_NONE = D3D10_CULL_NONE;
+        static constexpr auto FILL_SOLID = D3D10_FILL_SOLID;
+        static constexpr auto SRV_DIMENSION_TEXTURE2D = D3D11_SRV_DIMENSION_TEXTURE2D;
         static constexpr auto PRIMITIVE_TOPOLOGY_TRIANGLELIST = D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        static constexpr auto FILTER_MIN_MAG_MIP_LINEAR = D3D10_FILTER_MIN_MAG_MIP_LINEAR;
+        static constexpr auto TEXTURE_ADDRESS_CLAMP = D3D10_TEXTURE_ADDRESS_CLAMP;
+        static constexpr auto FLOAT32_MAX = D3D10_FLOAT32_MAX;
     };
 
     struct d3d11_traits
@@ -66,10 +76,14 @@ namespace gameoverlay::dxgi
         using render_target_view = ID3D11RenderTargetView;
         using shader_resource_view = ID3D11ShaderResourceView;
 
+        using blend_desc = D3D11_BLEND_DESC;
         using buffer_desc = D3D11_BUFFER_DESC;
+        using sampler_desc = D3D11_SAMPLER_DESC;
         using input_element_desc = D3D11_INPUT_ELEMENT_DESC;
         using depth_stencil_desc = D3D11_DEPTH_STENCIL_DESC;
         using texture2d_desc = D3D11_TEXTURE2D_DESC;
+        using rasterizer_desc = D3D11_RASTERIZER_DESC;
+        using shader_resource_view_desc = D3D11_SHADER_RESOURCE_VIEW_DESC;
 
         using subresource_data = D3D11_SUBRESOURCE_DATA;
 
@@ -84,8 +98,14 @@ namespace gameoverlay::dxgi
         static constexpr auto CPU_ACCESS_WRITE = D3D11_CPU_ACCESS_WRITE;
         static constexpr auto DEPTH_WRITE_MASK_ALL = D3D11_DEPTH_WRITE_MASK_ALL;
         static constexpr auto COMPARISON_ALWAYS = D3D11_COMPARISON_ALWAYS;
-
+        static constexpr auto COMPARISON_NEVER = D3D11_COMPARISON_NEVER;
+        static constexpr auto CULL_NONE = D3D11_CULL_NONE;
+        static constexpr auto FILL_SOLID = D3D11_FILL_SOLID;
+        static constexpr auto SRV_DIMENSION_TEXTURE2D = D3D11_SRV_DIMENSION_TEXTURE2D;
         static constexpr auto PRIMITIVE_TOPOLOGY_TRIANGLELIST = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        static constexpr auto FILTER_MIN_MAG_MIP_LINEAR = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        static constexpr auto TEXTURE_ADDRESS_CLAMP = D3D11_TEXTURE_ADDRESS_CLAMP;
+        static constexpr auto FLOAT32_MAX = D3D11_FLOAT32_MAX;
     };
 
     template <typename Class>
@@ -112,48 +132,20 @@ namespace gameoverlay::dxgi
         using traits = d3d11_traits;
     };
 
+    template <>
+    struct d3dx_trait_selector<ID3D10Texture2D>
+    {
+        using traits = d3d10_traits;
+    };
+
+    template <>
+    struct d3dx_trait_selector<ID3D11Texture2D>
+    {
+        using traits = d3d11_traits;
+    };
+
     template <typename Class>
     using d3dx_traits = typename d3dx_trait_selector<Class>::traits;
-
-    template <typename Texture>
-    struct texture_traits
-    {
-        static_assert(std::false_type::value, "Unsupported texture");
-    };
-
-    template <>
-    struct texture_traits<ID3D10Texture2D>
-    {
-        using description = D3D10_TEXTURE2D_DESC;
-    };
-
-    template <>
-    struct texture_traits<ID3D11Texture2D>
-    {
-        using description = D3D11_TEXTURE2D_DESC;
-    };
-
-    template <typename Device>
-    struct device_traits
-    {
-        static_assert(std::false_type::value, "Unsupported device");
-    };
-
-    template <>
-    struct device_traits<ID3D10Device>
-    {
-        using device = ID3D10Device;
-        using context = ID3D10Device;
-        using texture = ID3D10Texture2D;
-    };
-
-    template <>
-    struct device_traits<ID3D11Device>
-    {
-        using device = ID3D11Device;
-        using context = ID3D11DeviceContext;
-        using texture = ID3D11Texture2D;
-    };
 
     template <typename Device>
     CComPtr<Device> get_device(IDXGISwapChain& swap_chain)
@@ -195,7 +187,7 @@ namespace gameoverlay::dxgi
     template <typename Texture>
     dimensions get_texture_dimensions(Texture& texture)
     {
-        typename texture_traits<Texture>::description desc{};
+        typename d3dx_traits<Texture>::texture2d_desc desc{};
         texture.GetDesc(&desc);
 
         return {
@@ -213,7 +205,7 @@ namespace gameoverlay::dxgi
             return {};
         }
 
-        return get_texture_dimensions<Texture>(*back_buffer);
+        return get_texture_dimensions(*back_buffer);
     }
 
     inline HWND get_swap_chain_window(IDXGISwapChain& swap_chain)
