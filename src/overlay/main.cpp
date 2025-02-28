@@ -22,16 +22,11 @@ namespace
     }
 }
 
-BOOL APIENTRY DllMain(HMODULE /*module*/, DWORD callReason, LPVOID /*reserved*/)
+BOOL APIENTRY DllMain(HMODULE /*module*/, const DWORD call_reason, LPVOID /*reserved*/)
 {
-    switch (callReason)
+    if (call_reason == DLL_PROCESS_ATTACH)
     {
-    case DLL_PROCESS_ATTACH:
         initialize();
-        break;
-
-    default:
-        break;
     }
 
     return TRUE;
