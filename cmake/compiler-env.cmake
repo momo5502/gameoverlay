@@ -114,6 +114,7 @@ endif()
 # shared allocators between emulator and implementation
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>)
+set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT ProgramDatabase)
 
 ##########################################
 
@@ -132,8 +133,8 @@ set(OPT_DEBUG "-O0 -g")
 set(OPT_RELEASE "-O3 -g")
 
 if(MSVC)
-  set(OPT_DEBUG "/Od /Ob0 /Zi")
-  set(OPT_RELEASE "/O2 /Ob2 /Zi")
+  set(OPT_DEBUG "/Od /Ob0")
+  set(OPT_RELEASE "/O2 /Ob2")
 
   add_link_options(/DEBUG)
 endif()

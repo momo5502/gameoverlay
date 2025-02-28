@@ -20,6 +20,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET 11.0)
 
+set(CMAKE_CONFIGURATION_TYPES Debug Release)
+
 ##########################################
 
 project(overlay LANGUAGES C CXX)

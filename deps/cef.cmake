@@ -1,7 +1,5 @@
 include(FetchContent)
 
-SET(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO "RelWithDebInfo;Release;")
-
 set(CEF_ARCH "windows64")
 if("${TARGET_ARCH}" STREQUAL "i386")
     set(CEF_ARCH "windows32")
