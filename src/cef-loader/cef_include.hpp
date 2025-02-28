@@ -1,7 +1,7 @@
 #pragma once
 
 #pragma warning(push)
-#pragma warning(disable: 4100)
+#pragma warning(disable : 4100)
 
 #include <include/base/cef_bind.h>
 #include <include/base/cef_callback.h>
