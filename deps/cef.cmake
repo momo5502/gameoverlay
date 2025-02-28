@@ -1,5 +1,7 @@
 include(FetchContent)
 
+cmake_policy(SET CMP0169 OLD)
+
 set(CEF_ARCH "windows64")
 if("${TARGET_ARCH}" STREQUAL "i386")
     set(CEF_ARCH "windows32")
@@ -20,4 +22,10 @@ FetchContent_Declare(
     USES_TERMINAL_DOWNLOAD TRUE
 )
 
-FetchContent_MakeAvailable(cef)
+if(NOT cef_POPULATED)
+    FetchContent_Populate(cef)
+    file(REMOVE_RECURSE "${cef_SOURCE_DIR}/tests")
+    add_subdirectory(${cef_SOURCE_DIR} ${cef_BINARY_DIR})
+endif()
+
+#FetchContent_MakeAvailable(cef)
