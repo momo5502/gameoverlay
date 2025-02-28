@@ -98,6 +98,7 @@ if(MSVC)
   add_compile_definitions(
     _CRT_SECURE_NO_WARNINGS
     _CRT_NONSTDC_NO_WARNINGS
+    $<$<CONFIG:Debug>:_HAS_ITERATOR_DEBUGGING=0> # CEF needs that
   )
 endif()
 

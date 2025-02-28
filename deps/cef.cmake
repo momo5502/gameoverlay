@@ -22,10 +22,30 @@ FetchContent_Declare(
     USES_TERMINAL_DOWNLOAD TRUE
 )
 
-if(NOT cef_POPULATED)
-    FetchContent_Populate(cef)
-    file(REMOVE_RECURSE "${cef_SOURCE_DIR}/tests")
-    add_subdirectory(${cef_SOURCE_DIR} ${cef_BINARY_DIR})
-endif()
+FetchContent_Populate(cef)
+file(REMOVE_RECURSE "${cef_SOURCE_DIR}/tests")
+add_subdirectory(${cef_SOURCE_DIR} ${cef_BINARY_DIR} SYSTEM)
 
 #FetchContent_MakeAvailable(cef)
+
+get_directory_property(CEF_STANDARD_LIBS DIRECTORY ${cef_SOURCE_DIR} DEFINITION CEF_STANDARD_LIBS)
+get_directory_property(CEF_BINARY_DIR DIRECTORY ${cef_SOURCE_DIR} DEFINITION CEF_BINARY_DIR)
+get_directory_property(CEF_SANDBOX_STANDARD_LIBS DIRECTORY ${cef_SOURCE_DIR} DEFINITION CEF_SANDBOX_STANDARD_LIBS)
+get_directory_property(CEF_COMPILER_DEFINES DIRECTORY ${cef_SOURCE_DIR} DEFINITION CEF_COMPILER_DEFINES)
+get_directory_property(CEF_COMPILER_DEFINES_DEBUG DIRECTORY ${cef_SOURCE_DIR} DEFINITION CEF_COMPILER_DEFINES_DEBUG)
+get_directory_property(CEF_COMPILER_DEFINES_RELEASE DIRECTORY ${cef_SOURCE_DIR} DEFINITION CEF_COMPILER_DEFINES_RELEASE)
+
+
+target_include_directories(libcef_dll_wrapper INTERFACE "${cef_SOURCE_DIR}")
+target_link_directories(libcef_dll_wrapper INTERFACE "${CEF_BINARY_DIR}")
+target_link_libraries(libcef_dll_wrapper INTERFACE libcef cef_sandbox ${CEF_STANDARD_LIBS} ${CEF_SANDBOX_STANDARD_LIBS})
+
+target_compile_definitions(libcef_dll_wrapper INTERFACE ${CEF_COMPILER_DEFINES})
+
+foreach(def ${CEF_COMPILER_DEFINES_DEBUG})
+    target_compile_definitions(libcef_dll_wrapper INTERFACE "$<$<CONFIG:Debug>:${def}>")
+endforeach()
+
+foreach(def ${CEF_COMPILER_DEFINES_RELEASE})
+    target_compile_definitions(libcef_dll_wrapper INTERFACE "$<$<CONFIG:Release>:${def}>")
+endforeach()
