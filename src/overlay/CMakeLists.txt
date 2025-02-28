@@ -15,4 +15,5 @@ target_link_libraries(overlay PUBLIC
   backend-d3d9
   backend-dxgi
   backend-opengl
+  libcef_dll_wrapper
 )
