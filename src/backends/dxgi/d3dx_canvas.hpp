@@ -48,8 +48,8 @@ namespace gameoverlay::dxgi
             context_store(Context& c)
                 : context(&c)
             {
-                c.OMGetRenderTargets(this->render_target_views.size(), &this->render_target_views[0],
-                                     &this->depth_stencil_view);
+                c.OMGetRenderTargets(static_cast<uint32_t>(this->render_target_views.size()),
+                                     &this->render_target_views[0], &this->depth_stencil_view);
                 c.OMGetDepthStencilState(&this->depth_stencil_state, &this->ref);
             }
 
@@ -58,8 +58,8 @@ namespace gameoverlay::dxgi
                 auto& c = *this->context;
 
                 c.OMSetDepthStencilState(this->depth_stencil_state, this->ref);
-                c.OMSetRenderTargets(this->render_target_views.size(), &this->render_target_views[0].p,
-                                     this->depth_stencil_view);
+                c.OMSetRenderTargets(static_cast<uint32_t>(this->render_target_views.size()),
+                                     &this->render_target_views[0].p, this->depth_stencil_view);
             }
         };
 
