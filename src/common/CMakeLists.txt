@@ -7,12 +7,6 @@ add_library(common ${SRC_FILES})
 
 momo_assign_source_group(${SRC_FILES})
 
-if (MSVC)
-  target_link_libraries(common PUBLIC
-    minhook
-  )
-endif()
-
 target_include_directories(common INTERFACE "${CMAKE_CURRENT_LIST_DIR}")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)

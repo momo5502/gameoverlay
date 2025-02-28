@@ -11,7 +11,7 @@ add_library(backend-opengl ${SRC_FILES})
 momo_assign_source_group(${SRC_FILES})
 
 target_link_libraries(backend-opengl PUBLIC
-  common
+  hooking
   backend
 )
 

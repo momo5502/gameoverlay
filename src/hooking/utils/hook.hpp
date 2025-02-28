@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <optional>
 
-#include "nt.hpp"
+#include <utils/nt.hpp>
 
 #if __has_include(<asmjit/core/jitruntime.h>)
 #define HOOK_ENABLE_ASMJIT

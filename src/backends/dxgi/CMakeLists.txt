@@ -11,7 +11,7 @@ add_library(backend-dxgi ${SRC_FILES})
 momo_assign_source_group(${SRC_FILES})
 
 target_link_libraries(backend-dxgi PUBLIC
-  common
+  hooking
   backend
 )
 

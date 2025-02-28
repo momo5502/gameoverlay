@@ -1,4 +1,5 @@
 add_subdirectory(common)
+add_subdirectory(hooking)
 add_subdirectory(backend)
 add_subdirectory(backends)
 add_subdirectory(overlay)

@@ -3,9 +3,9 @@
 #include <map>
 #include <MinHook.h>
 
-#include "concurrency.hpp"
-#include "string.hpp"
-#include "nt.hpp"
+#include <utils/concurrency.hpp>
+#include <utils/string.hpp>
+#include <utils/nt.hpp>
 
 #ifdef max
 #undef max
