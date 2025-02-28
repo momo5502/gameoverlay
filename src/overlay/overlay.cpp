@@ -1,10 +1,13 @@
 #include "overlay.hpp"
 
 #include <list>
+#include <string>
+
+#include <backend.hpp>
+
 #include <backend_d3d9.hpp>
 #include <backend_dxgi.hpp>
 #include <backend_opengl.hpp>
-#include <string>
 
 namespace gameoverlay
 {
