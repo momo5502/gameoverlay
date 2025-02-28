@@ -1,0 +1,23 @@
+file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
+  *.cpp
+  *.hpp
+  *.rc
+)
+
+list(SORT SRC_FILES)
+
+add_library(cef-loader ${SRC_FILES})
+
+momo_assign_source_group(${SRC_FILES})
+
+target_link_libraries(cef-loader PUBLIC
+  libcef_dll_wrapper
+)
+
+target_include_directories(cef-loader INTERFACE "${CMAKE_CURRENT_LIST_DIR}")
+
+target_link_options(cef-loader PUBLIC
+	"-IGNORE:4221"
+	"-IGNORE:4006"
+	"/DELAYLOAD:libcef.dll"
+)
