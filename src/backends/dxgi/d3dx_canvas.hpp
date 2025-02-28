@@ -4,6 +4,7 @@
 #include "dxgi_canvas.hpp"
 #include "dxgi_utils.hpp"
 
+#include <array>
 #include <stdexcept>
 #include <string_view>
 
@@ -36,16 +37,29 @@ namespace gameoverlay::dxgi
             UINT ref{};
             CComPtr<Context> context{};
             CComPtr<typename traits::depth_stencil_state> depth_stencil_state{};
+            CComPtr<typename traits::depth_stencil_view> depth_stencil_view{};
+
+            static_assert(sizeof(CComPtr<typename traits::render_target_view>) ==
+                          sizeof(typename traits::render_target_view));
+
+            std::array<CComPtr<typename traits::render_target_view>, traits::SIMULTANEOUS_RENDER_TARGET_COUNT>
+                render_target_views{};
 
             context_store(Context& c)
                 : context(&c)
             {
-                this->context->OMGetDepthStencilState(&this->depth_stencil_state, &this->ref);
+                c.OMGetRenderTargets(this->render_target_views.size(), &this->render_target_views[0],
+                                     &this->depth_stencil_view);
+                c.OMGetDepthStencilState(&this->depth_stencil_state, &this->ref);
             }
 
             ~context_store()
             {
-                this->context->OMSetDepthStencilState(this->depth_stencil_state, this->ref);
+                auto& c = *this->context;
+
+                c.OMSetDepthStencilState(this->depth_stencil_state, this->ref);
+                c.OMSetRenderTargets(this->render_target_views.size(), &this->render_target_views[0].p,
+                                     this->depth_stencil_view);
             }
         };
 
@@ -596,8 +610,6 @@ namespace gameoverlay::dxgi
             this->sampler_state_ = detail::create_sampler_state(d);
             this->rasterizer_state_ = detail::create_rasterizer_state(d);
             this->depth_stencil_state_ = detail::create_depth_stencil_state(d);
-
-            this->render_target_view_ = detail::create_render_target_view(d, *this->swap_chain_);
         }
 
         d3dx_canvas(IDXGISwapChain& swap_chain, const dimensions dim)
@@ -650,6 +662,11 @@ namespace gameoverlay::dxgi
             }
         }
 
+        void before_resize() override
+        {
+            this->render_target_view_.Release();
+        }
+
         void draw() const override
         {
             if (!this->texture_)
@@ -688,6 +705,7 @@ namespace gameoverlay::dxgi
 
             c->OMSetBlendState(this->blend_state_, blendFactor, 0xffffffff);
             c->OMSetDepthStencilState(this->depth_stencil_state_, 1);
+
             c->OMSetRenderTargets(1, &this->render_target_view_.p, nullptr);
 
             c->DrawIndexed(6, 0, 0);
@@ -716,10 +734,15 @@ namespace gameoverlay::dxgi
 
         void resize_texture(const dimensions new_dimensions) override
         {
-            if (new_dimensions.is_zero())
+            const auto needs_resize =
+                new_dimensions != this->get_dimensions() || !this->render_target_view_ || !this->texture_;
+
+            if (new_dimensions.is_zero() || !needs_resize)
             {
                 return;
             }
+
+            this->render_target_view_ = detail::create_render_target_view(*this->device_, *this->swap_chain_);
 
             this->texture_ = detail::create_texture_2d(*this->device_, new_dimensions, DXGI_FORMAT_R8G8B8A8_UNORM);
             this->shader_resource_view_ = detail::create_shader_resource_view(*this->texture_);

@@ -152,12 +152,16 @@ namespace gameoverlay::dxgi
             return;
         }
 
-        if (this->canvas_->get_dimensions() != dim)
-        {
-            this->canvas_->resize(dim);
-        }
-
+        this->canvas_->resize(dim);
         this->handle_new_frame(*this->canvas_);
         this->canvas_->draw();
+    }
+
+    void dxgi_renderer::before_resize() const
+    {
+        if (this->canvas_)
+        {
+            this->canvas_->before_resize();
+        }
     }
 }

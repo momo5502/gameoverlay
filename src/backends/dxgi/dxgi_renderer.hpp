@@ -17,6 +17,8 @@ namespace gameoverlay::dxgi
         HWND get_window() const override;
         backend_type get_backend_type() const override;
 
+        void before_resize() const;
+
       private:
         bool canvas_failed_{false};
         HWND window_{};

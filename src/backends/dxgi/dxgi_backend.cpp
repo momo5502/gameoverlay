@@ -11,6 +11,8 @@ namespace gameoverlay::dxgi
         struct hooks
         {
             utils::hook::detour swap_chain_present{};
+            utils::hook::detour swap_chain_resize_target{};
+            utils::hook::detour swap_chain_resize_buffers{};
         };
 
         hooks& get_hooks()
@@ -35,6 +37,34 @@ namespace gameoverlay::dxgi
                     r.draw_frame(); //
                 },
                 *swap_chain);
+        }
+
+        void before_resize(IDXGISwapChain* swap_chain)
+        {
+            if (!swap_chain || !g_backend)
+            {
+                return;
+            }
+
+            g_backend->access_renderer(swap_chain, [](const dxgi_renderer& r) {
+                r.before_resize(); //
+            });
+        }
+
+        HRESULT WINAPI swap_chain_resize_buffers_stub(IDXGISwapChain* swap_chain, const UINT buffer_count,
+                                                      const UINT width, const UINT height, const DXGI_FORMAT new_format,
+                                                      const UINT swap_chain_flags)
+        {
+            before_resize(swap_chain);
+            return get_hooks().swap_chain_resize_buffers.invoke_stdcall<HRESULT>(swap_chain, buffer_count, width,
+                                                                                 height, new_format, swap_chain_flags);
+        }
+
+        HRESULT WINAPI swap_chain_resize_target_stub(IDXGISwapChain* swap_chain,
+                                                     const DXGI_MODE_DESC* new_target_parameters)
+        {
+            before_resize(swap_chain);
+            return get_hooks().swap_chain_resize_target.invoke_stdcall<HRESULT>(swap_chain, new_target_parameters);
         }
 
         HRESULT WINAPI swap_chain_present_stub(IDXGISwapChain* swap_chain, const UINT sync_interval, const UINT flags)
@@ -81,8 +111,16 @@ namespace gameoverlay::dxgi
             return;
         }
 
+        auto& hooks = get_hooks();
+
+        auto* swap_chain_resize_target = *utils::hook::get_vtable_entry(&*swap_chain, &IDXGISwapChain::ResizeTarget);
+        hooks.swap_chain_resize_target.create(swap_chain_resize_target, swap_chain_resize_target_stub);
+
+        auto* swap_chain_resize_buffers = *utils::hook::get_vtable_entry(&*swap_chain, &IDXGISwapChain::ResizeBuffers);
+        hooks.swap_chain_resize_buffers.create(swap_chain_resize_buffers, swap_chain_resize_buffers_stub);
+
         auto* swap_chain_present = *utils::hook::get_vtable_entry(&*swap_chain, &IDXGISwapChain::Present);
-        get_hooks().swap_chain_present.create(swap_chain_present, swap_chain_present_stub);
+        hooks.swap_chain_present.create(swap_chain_present, swap_chain_present_stub);
     }
 
     std::unique_ptr<backend> create_backend(backend::owned_handler h)

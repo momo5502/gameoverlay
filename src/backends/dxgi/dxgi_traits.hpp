@@ -21,6 +21,7 @@ namespace gameoverlay::dxgi
         using depth_stencil_state = ID3D10DepthStencilState;
 
         using render_target_view = ID3D10RenderTargetView;
+        using depth_stencil_view = ID3D10DepthStencilView;
         using shader_resource_view = ID3D10ShaderResourceView;
 
         using box = D3D10_BOX;
@@ -54,7 +55,9 @@ namespace gameoverlay::dxgi
         static constexpr auto PRIMITIVE_TOPOLOGY_TRIANGLELIST = D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         static constexpr auto FILTER_MIN_MAG_MIP_LINEAR = D3D10_FILTER_MIN_MAG_MIP_LINEAR;
         static constexpr auto TEXTURE_ADDRESS_CLAMP = D3D10_TEXTURE_ADDRESS_CLAMP;
+
         static constexpr auto FLOAT32_MAX = D3D10_FLOAT32_MAX;
+        static constexpr auto SIMULTANEOUS_RENDER_TARGET_COUNT = D3D10_SIMULTANEOUS_RENDER_TARGET_COUNT;
     };
 
     struct d3d11_traits
@@ -74,6 +77,7 @@ namespace gameoverlay::dxgi
         using depth_stencil_state = ID3D11DepthStencilState;
 
         using render_target_view = ID3D11RenderTargetView;
+        using depth_stencil_view = ID3D11DepthStencilView;
         using shader_resource_view = ID3D11ShaderResourceView;
 
         using box = D3D11_BOX;
@@ -107,7 +111,9 @@ namespace gameoverlay::dxgi
         static constexpr auto PRIMITIVE_TOPOLOGY_TRIANGLELIST = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         static constexpr auto FILTER_MIN_MAG_MIP_LINEAR = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
         static constexpr auto TEXTURE_ADDRESS_CLAMP = D3D11_TEXTURE_ADDRESS_CLAMP;
+
         static constexpr auto FLOAT32_MAX = D3D11_FLOAT32_MAX;
+        static constexpr auto SIMULTANEOUS_RENDER_TARGET_COUNT = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
     };
 
     template <typename Class>
