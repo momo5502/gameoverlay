@@ -134,6 +134,11 @@ namespace gameoverlay
                     {
                     }
 
+                    ~overlay_renderer_handler() override
+                    {
+                        OutputDebugStringA("Destroying renderer");
+                    }
+
                     void on_frame(const renderer&, canvas& c) override
                     {
                         this->buffer_->access([&](buffer& b) {
