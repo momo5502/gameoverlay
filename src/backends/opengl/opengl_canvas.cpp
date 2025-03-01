@@ -152,7 +152,7 @@ namespace gameoverlay::opengl
         glMatrixMode(GL_PROJECTION);
         glPushMatrix();
         glLoadIdentity();
-        glOrtho(-1, 1, -1, 1, -1, 2);
+        glOrtho(-1, 1, 1, -1, -1, 2);
         glTranslatef(0.0, 0.0, 0.0);
         glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
