@@ -27,3 +27,10 @@ target_link_options(cef-loader PUBLIC
   "-IGNORE:4020"
 	"/DELAYLOAD:libcef.dll"
 )
+
+set(CEF_TARGET_DIR "$<TARGET_FILE_DIR:cef-loader>/cef")
+
+add_custom_command(TARGET cef-loader POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CEF_BINARY_DIRECTORY}" "${CEF_TARGET_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CEF_BINARY_DIRECTORY}/../Resources" "${CEF_TARGET_DIR}"
+)

@@ -36,6 +36,8 @@ get_directory_property(CEF_COMPILER_DEFINES_DEBUG DIRECTORY ${cef_SOURCE_DIR} DE
 get_directory_property(CEF_COMPILER_DEFINES_RELEASE DIRECTORY ${cef_SOURCE_DIR} DEFINITION CEF_COMPILER_DEFINES_RELEASE)
 
 
+set(CEF_BINARY_DIRECTORY "${CEF_BINARY_DIR}" PARENT_SCOPE)
+
 target_include_directories(libcef_dll_wrapper INTERFACE "${cef_SOURCE_DIR}")
 target_link_directories(libcef_dll_wrapper INTERFACE "${CEF_BINARY_DIR}")
 target_link_libraries(libcef_dll_wrapper INTERFACE libcef cef_sandbox ${CEF_STANDARD_LIBS} ${CEF_SANDBOX_STANDARD_LIBS})
