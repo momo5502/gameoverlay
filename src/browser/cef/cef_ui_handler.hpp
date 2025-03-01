@@ -62,6 +62,7 @@ namespace gameoverlay
 
         void close_all_browsers(bool force_close);
         void trigger_resize();
+        void trigger_repaint();
 
       private:
         std::atomic_bool stop_{false};

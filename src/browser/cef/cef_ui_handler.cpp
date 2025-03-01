@@ -2,6 +2,8 @@
 
 #include "cef_ui.hpp"
 
+using namespace std::literals;
+
 namespace gameoverlay
 {
     cef_ui_handler::cef_ui_handler(browser_handler& handler)
@@ -26,7 +28,7 @@ namespace gameoverlay
                     });
                 }
 
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::sleep_for(10ms);
             }
         });
     }
@@ -111,26 +113,37 @@ namespace gameoverlay
         }
     }
 
+    void cef_ui_handler::trigger_repaint()
+    {
+        for (const auto& browser : this->browser_list_)
+        {
+            browser->GetHost()->Invalidate(PET_VIEW);
+        }
+    }
+
     void cef_ui_handler::trigger_resize()
     {
         for (const auto& browser : this->browser_list_)
         {
             browser->GetHost()->WasResized();
         }
+
+        cef_ui::post_delayed_on_ui(
+            [this] {
+                this->trigger_repaint(); //
+            },
+            100ms);
     }
 
     void cef_ui_handler::GetViewRect(CefRefPtr<CefBrowser> /*browser*/, CefRect& rect)
     {
-        if (this->handler_)
-        {
-            const auto width = static_cast<int>(this->handler_->get_width());
-            const auto height = static_cast<int>(this->handler_->get_height());
+        const auto width = static_cast<int>(this->handler_->get_width());
+        const auto height = static_cast<int>(this->handler_->get_height());
 
-            if (width > 0 && height > 0)
-            {
-                rect.Set(0, 0, width, height);
-                return;
-            }
+        if (width > 0 && height > 0)
+        {
+            rect.Set(0, 0, width, height);
+            return;
         }
 
         rect.Set(0, 0, 640, 480);
@@ -139,11 +152,6 @@ namespace gameoverlay
     void cef_ui_handler::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType /*type*/,
                                  const RectList& /*dirty_rects*/, const void* buffer, const int width, const int height)
     {
-        if (!this->handler_)
-        {
-            return;
-        }
-
         if (this->handler_->get_width() == static_cast<uint32_t>(width) &&
             this->handler_->get_height() == static_cast<uint32_t>(height))
         {
