@@ -20,15 +20,33 @@ namespace gameoverlay
         class buffer
         {
           public:
-            buffer(dimensions dim = {})
+            buffer(const dimensions dim = {})
             {
                 this->resize(dim);
             }
 
             void resize(const dimensions new_dimensions)
             {
+                const auto old_dimensions = this->dimensions_;
                 this->dimensions_ = new_dimensions;
-                this->data_.resize(static_cast<size_t>(4) * this->dimensions_.width * this->dimensions_.height);
+
+                const auto old_data = std::move(this->data_);
+
+                this->data_ =
+                    std::vector<uint8_t>(static_cast<size_t>(4) * new_dimensions.width * new_dimensions.height);
+
+                if (this->data_.empty() || old_data.empty())
+                {
+                    return;
+                }
+
+                for (uint32_t row = 0; row < std::min(new_dimensions.height, old_dimensions.height); ++row)
+                {
+                    auto* old_row = old_data.data() + row * old_dimensions.width * 4;
+                    auto* new_row = this->data_.data() + row * new_dimensions.width * 4;
+
+                    memcpy(new_row, old_row, std::min(new_dimensions.width, old_dimensions.width) * 4);
+                }
             }
 
             dimensions get_dimensions() const

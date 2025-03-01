@@ -14,7 +14,6 @@ namespace
 
     DWORD WINAPI initialize_async(LPVOID)
     {
-        // CefGetExitCode();
         get_overlay() = gameoverlay::create_overlay();
         return 0;
     }
