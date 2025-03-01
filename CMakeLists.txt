@@ -4,12 +4,6 @@ cmake_minimum_required(VERSION 3.26.4)
 
 option(MOMO_ENABLE_SANITIZER "Enable sanitizer" OFF)
 
-if(MOMO_BUILD_AS_LIBRARY)
-    add_compile_definitions(MOMO_BUILD_AS_LIBRARY=1)
-else()
-    add_compile_definitions(MOMO_BUILD_AS_LIBRARY=0)
-endif()
-
 ##########################################
 
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)

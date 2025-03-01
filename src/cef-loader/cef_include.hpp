@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utils/win.hpp>
+
 #pragma warning(push)
 #pragma warning(disable : 4100)
 

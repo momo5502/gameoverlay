@@ -2,6 +2,7 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
   *.cpp
   *.hpp
   *.rc
+  *.manifest
 )
 
 list(SORT SRC_FILES)

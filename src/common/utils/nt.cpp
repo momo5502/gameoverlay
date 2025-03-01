@@ -164,7 +164,7 @@ namespace utils::nt
             return {};
 
         const auto path = std::filesystem::path(this->get_path());
-        return path.parent_path().generic_string();
+        return path.parent_path();
     }
 
     void library::free()
