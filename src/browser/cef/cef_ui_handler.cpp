@@ -7,9 +7,39 @@ namespace gameoverlay
     cef_ui_handler::cef_ui_handler(browser_handler& handler)
         : handler_(&handler)
     {
+        this->thread_ = std::thread([this] {
+            uint32_t last_width{0};
+            uint32_t last_height{0};
+
+            while (!this->stop_)
+            {
+                const auto new_width = this->handler_->get_width();
+                const auto new_height = this->handler_->get_height();
+
+                if (last_height != new_height || last_width != new_width)
+                {
+                    last_height = new_height;
+                    last_width = new_width;
+
+                    cef_ui::post_on_ui([this] {
+                        this->trigger_resize(); //
+                    });
+                }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        });
     }
 
-    cef_ui_handler::~cef_ui_handler() = default;
+    cef_ui_handler::~cef_ui_handler()
+    {
+        this->stop_ = true;
+
+        if (this->thread_.joinable())
+        {
+            this->thread_.join();
+        }
+    }
 
     void cef_ui_handler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
     {

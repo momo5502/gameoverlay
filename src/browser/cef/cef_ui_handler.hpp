@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cef_include.hpp>
+#include <thread>
 
 #include "../browser_handler.hpp"
 
@@ -63,6 +64,8 @@ namespace gameoverlay
         void trigger_resize();
 
       private:
+        std::atomic_bool stop_{false};
+        std::thread thread_{};
         browser_handler* handler_ = nullptr;
         std::vector<CefRefPtr<CefBrowser>> browser_list_{};
 
