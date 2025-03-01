@@ -63,7 +63,7 @@ namespace gameoverlay::dxgi
     struct d3d11_traits
     {
         using device = ID3D11Device;
-        using context = ID3D11Device;
+        using context = ID3D11DeviceContext;
         using texture2d = ID3D11Texture2D;
         using buffer = ID3D11Buffer;
 
