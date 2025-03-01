@@ -23,5 +23,6 @@ namespace gameoverlay
     {
         command_line->AppendSwitch("enable-experimental-web-platform-features");
         command_line->AppendSwitch("enable-media-stream");
+        command_line->AppendSwitch("disable-geolocation");
     }
 }
