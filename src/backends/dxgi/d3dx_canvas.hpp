@@ -442,6 +442,21 @@ namespace gameoverlay::dxgi
             return render_target_view;
         }
 
+        template <typename traits>
+        bool is_srgb(IDXGISwapChain& swap_chain)
+        {
+            const auto back_buffer = get_back_buffer<typename traits::texture2d>(swap_chain);
+            if (!back_buffer)
+            {
+                return false;
+            }
+
+            typename traits::texture2d_desc desc{};
+            back_buffer->GetDesc(&desc);
+
+            return is_srgb_format(desc.Format);
+        }
+
         template <typename Device>
         CComPtr<typename d3dx_traits<Device>::sampler_state> create_sampler_state(Device& device)
         {
@@ -742,9 +757,12 @@ namespace gameoverlay::dxgi
                 return;
             }
 
+            const auto srgb = detail::is_srgb<traits>(*this->swap_chain_);
+            const auto format = srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
+
             this->render_target_view_ = detail::create_render_target_view(*this->device_, *this->swap_chain_);
 
-            this->texture_ = detail::create_texture_2d(*this->device_, new_dimensions, DXGI_FORMAT_R8G8B8A8_UNORM);
+            this->texture_ = detail::create_texture_2d(*this->device_, new_dimensions, format);
             this->shader_resource_view_ = detail::create_shader_resource_view(*this->texture_);
 
             detail::translate_vertices(*this->vertex_buffer_, 0, 0, ~0UL, new_dimensions);

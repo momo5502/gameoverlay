@@ -2,6 +2,7 @@
 
 #include "dxgi_traits.hpp"
 
+#include <optional>
 #include <dimensions.hpp>
 
 namespace gameoverlay::dxgi
@@ -67,14 +68,43 @@ namespace gameoverlay::dxgi
         return get_texture_dimensions(*back_buffer);
     }
 
-    inline HWND get_swap_chain_window(IDXGISwapChain& swap_chain)
+    inline std::optional<DXGI_SWAP_CHAIN_DESC> get_swapchain_desc(IDXGISwapChain& swap_chain)
     {
         DXGI_SWAP_CHAIN_DESC desc{};
         if (FAILED(swap_chain.GetDesc(&desc)))
         {
+            return std::nullopt;
+        }
+
+        return desc;
+    }
+
+    inline HWND get_swap_chain_window(IDXGISwapChain& swap_chain)
+    {
+        const auto desc = get_swapchain_desc(swap_chain);
+
+        if (!desc)
+        {
             return {};
         }
 
-        return desc.OutputWindow;
+        return desc->OutputWindow;
+    }
+
+    inline bool is_srgb_format(const DXGI_FORMAT format)
+    {
+        switch (format)
+        {
+        case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+        case DXGI_FORMAT_BC1_UNORM_SRGB:
+        case DXGI_FORMAT_BC2_UNORM_SRGB:
+        case DXGI_FORMAT_BC3_UNORM_SRGB:
+        case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+        case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+        case DXGI_FORMAT_BC7_UNORM_SRGB:
+            return true;
+        default:
+            return false;
+        }
     }
 }
