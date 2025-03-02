@@ -2,6 +2,7 @@
 #include "dxgi_utils.hpp"
 
 #include "d3dx_canvas.hpp"
+#include "d3d12_canvas.hpp"
 
 namespace gameoverlay::dxgi
 {
@@ -60,7 +61,23 @@ namespace gameoverlay::dxgi
             };
         }
 
-        dimensions get_swap_chain_dimensions(IDXGISwapChain& swap_chain, const backend_type type)
+        dimensions get_d3d12_dimensions(IDXGISwapChain& swap_chain)
+        {
+            const auto back_buffer = get_back_buffer<ID3D12Resource>(swap_chain);
+            if (!back_buffer)
+            {
+                return {};
+            }
+
+            const auto desc = back_buffer->GetDesc();
+
+            return {
+                static_cast<uint32_t>(desc.Width),
+                static_cast<uint32_t>(desc.Height),
+            };
+        }
+
+        dimensions get_buffer_dimensions(IDXGISwapChain& swap_chain, const backend_type type)
         {
             switch (type)
             {
@@ -68,6 +85,8 @@ namespace gameoverlay::dxgi
                 return get_d3d10_dimensions(swap_chain);
             case backend_type::d3d11:
                 return get_d3d11_dimensions(swap_chain);
+            case backend_type::d3d12:
+                return get_d3d12_dimensions(swap_chain);
             default:
                 return {};
             }
@@ -82,6 +101,10 @@ namespace gameoverlay::dxgi
                 return std::make_unique<d3dx_canvas<d3d10_traits>>(swap_chain, dim);
             case backend_type::d3d11:
                 return std::make_unique<d3dx_canvas<d3d11_traits>>(swap_chain, dim);
+            case backend_type::d3d12: {
+                return std::make_unique<d3d12_canvas>(*query_interface<IDXGISwapChain3>(swap_chain), dim);
+            }
+
             default:
                 throw std::runtime_error("Failed to create dxgi canvas");
             }
@@ -126,7 +149,7 @@ namespace gameoverlay::dxgi
 
     void dxgi_renderer::draw_frame()
     {
-        const auto dim = get_swap_chain_dimensions(*this->swap_chain_, this->type_);
+        const auto dim = get_buffer_dimensions(*this->swap_chain_, this->type_);
 
         if (!this->canvas_)
         {
@@ -162,6 +185,14 @@ namespace gameoverlay::dxgi
         if (this->canvas_)
         {
             this->canvas_->before_resize();
+        }
+    }
+
+    void dxgi_renderer::after_frame() const
+    {
+        if (this->canvas_)
+        {
+            this->canvas_->after_draw();
         }
     }
 }

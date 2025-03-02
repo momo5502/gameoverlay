@@ -3,6 +3,7 @@
 #include "dxgi_traits.hpp"
 
 #include <optional>
+#include <stdexcept>
 #include <dimensions.hpp>
 
 namespace gameoverlay::dxgi
@@ -29,6 +30,24 @@ namespace gameoverlay::dxgi
         CComPtr<ID3D11DeviceContext> context{};
         device.GetImmediateContext(&context);
         return context;
+    }
+
+    template <typename Interface>
+    CComPtr<Interface> query_interface(IUnknown& object, const bool throw_error = true)
+    {
+        CComPtr<Interface> target{};
+        const auto res = object.QueryInterface(__uuidof(Interface), reinterpret_cast<void**>(&target));
+        if (SUCCEEDED(res) && target)
+        {
+            return target;
+        }
+
+        if (!throw_error)
+        {
+            return {};
+        }
+
+        throw std::runtime_error("Failed to query interface");
     }
 
     template <typename Texture>

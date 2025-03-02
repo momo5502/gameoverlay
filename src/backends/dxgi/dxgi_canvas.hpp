@@ -19,6 +19,10 @@ namespace gameoverlay::dxgi
         {
         }
 
+        virtual void after_draw()
+        {
+        }
+
         void resize(const dimensions new_dimensions)
         {
             this->resize_texture(new_dimensions);

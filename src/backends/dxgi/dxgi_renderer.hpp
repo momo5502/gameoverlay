@@ -18,6 +18,7 @@ namespace gameoverlay::dxgi
         backend_type get_backend_type() const override;
 
         void before_resize() const;
+        void after_frame() const;
 
       private:
         bool canvas_failed_{false};
