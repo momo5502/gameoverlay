@@ -67,7 +67,7 @@ namespace gameoverlay
                 backends.emplace_back(dxgi::create_backend(this->make_handler()));
                 backends.emplace_back(opengl::create_backend(this->make_handler()));
 
-                ui.create_browser(*this, "https://google.com");
+                ui.create_browser(*this, "file:///C:/Users/mauri/Desktop/gameoverlay/src/data/main.html");
             }
 
             backend::owned_handler make_handler()

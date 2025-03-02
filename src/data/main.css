@@ -1,0 +1,16 @@
+html,
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.notification {
+    position: fixed;
+    top: 0;
+    right: 0;
+    margin: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: rgb(208, 255, 0);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+}
