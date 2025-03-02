@@ -16,4 +16,4 @@ target_link_libraries(browser PUBLIC
   common
 )
 
-target_include_directories(browser INTERFACE "${CMAKE_CURRENT_LIST_DIR}")
+target_include_directories(browser PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include")

@@ -1,10 +1,12 @@
-#include <cef/cef_ui.hpp>
+#include <utils/win.hpp>
+
+#include <web_ui.hpp>
 
 int main(int, char**)
 {
     try
     {
-        return gameoverlay::cef_ui::run_process();
+        return gameoverlay::web_ui::run_process();
     }
     catch (const std::exception& e)
     {

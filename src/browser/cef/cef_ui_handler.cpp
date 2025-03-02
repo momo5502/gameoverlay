@@ -6,8 +6,9 @@ using namespace std::literals;
 
 namespace gameoverlay
 {
-    cef_ui_handler::cef_ui_handler(browser_handler& handler)
-        : handler_(&handler)
+    cef_ui_handler::cef_ui_handler(cef_ui& ui, web_ui_handler& handler)
+        : ui_(&ui),
+          handler_(&handler)
     {
         this->thread_ = std::thread([this] {
             dimensions last_dim{};
@@ -38,31 +39,32 @@ namespace gameoverlay
         {
             this->thread_.join();
         }
+        this->browser_ = nullptr;
     }
 
     void cef_ui_handler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
     {
         CEF_REQUIRE_UI_THREAD()
-        this->browser_list_.push_back(std::move(browser));
+        assert(!this->browser_ && "Only one browser supported by one ui handler");
+
+        if (!this->browser_)
+        {
+            this->browser_ = browser;
+        }
+
+        this->ui_->store_browser(std::move(browser));
     }
 
     void cef_ui_handler::OnBeforeClose(const CefRefPtr<CefBrowser> browser)
     {
         CEF_REQUIRE_UI_THREAD()
 
-        for (auto bit = this->browser_list_.begin(); bit != this->browser_list_.end(); ++bit)
+        if (this->browser_ && this->browser_->IsSame(browser))
         {
-            if ((*bit)->IsSame(browser))
-            {
-                this->browser_list_.erase(bit);
-                break;
-            }
+            this->browser_ = nullptr;
         }
 
-        if (this->browser_list_.empty())
-        {
-            CefQuitMessageLoop();
-        }
+        this->ui_->remove_browser(browser);
     }
 
     void cef_ui_handler::OnBeforeContextMenu(CefRefPtr<CefBrowser> /*browser*/, CefRefPtr<CefFrame> /*frame*/,
@@ -89,41 +91,26 @@ namespace gameoverlay
         return false;
     }
 
-    void cef_ui_handler::close_all_browsers(const bool force_close)
-    {
-        if (this->browser_list_.empty())
-        {
-            return;
-        }
-
-        if (!CefCurrentlyOn(TID_UI))
-        {
-            cef_ui::post_on_ui([this, force_close] {
-                this->close_all_browsers(force_close); //
-            });
-            return;
-        }
-
-        for (const auto& browser : this->browser_list_)
-        {
-            browser->GetHost()->CloseBrowser(force_close);
-        }
-    }
-
     void cef_ui_handler::trigger_repaint()
     {
-        for (const auto& browser : this->browser_list_)
+        CEF_REQUIRE_UI_THREAD()
+
+        if (this->browser_)
         {
-            browser->GetHost()->Invalidate(PET_VIEW);
+            this->browser_->GetHost()->Invalidate(PET_VIEW);
         }
     }
 
     void cef_ui_handler::trigger_resize()
     {
-        for (const auto& browser : this->browser_list_)
+        CEF_REQUIRE_UI_THREAD()
+
+        if (!this->browser_)
         {
-            browser->GetHost()->WasResized();
+            return;
         }
+
+        this->browser_->GetHost()->WasResized();
 
         cef_ui::post_delayed_on_ui(
             [this] {

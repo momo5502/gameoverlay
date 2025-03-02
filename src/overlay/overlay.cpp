@@ -11,85 +11,34 @@
 
 #include <utils/concurrency.hpp>
 
-#include <cef/cef_ui.hpp>
+#include <web_ui.hpp>
+
+#include "frame_buffer.hpp"
 
 namespace gameoverlay
 {
     namespace
     {
-        class buffer
+        struct overlay : utils::object, web_ui_handler
         {
-          public:
-            buffer(const dimensions dim = {})
-            {
-                this->resize(dim);
-            }
-
-            void resize(const dimensions new_dimensions)
-            {
-                const auto old_dimensions = this->dimensions_;
-                this->dimensions_ = new_dimensions;
-
-                const auto old_data = std::move(this->data_);
-
-                constexpr size_t pixel_size = 4;
-
-                this->data_ = std::vector<uint8_t>(pixel_size * new_dimensions.width * new_dimensions.height);
-
-                if (this->data_.empty() || old_data.empty())
-                {
-                    return;
-                }
-
-                for (uint32_t row = 0; row < std::min(new_dimensions.height, old_dimensions.height); ++row)
-                {
-                    auto* old_row = old_data.data() + pixel_size * row * old_dimensions.width;
-                    auto* new_row = this->data_.data() + pixel_size * row * new_dimensions.width;
-
-                    memcpy(new_row, old_row, pixel_size * std::min(new_dimensions.width, old_dimensions.width));
-                }
-            }
-
-            dimensions get_dimensions() const
-            {
-                return dimensions_;
-            }
-
-            std::span<uint8_t> get_buffer()
-            {
-                return this->data_;
-            }
-
-            std::span<const uint8_t> get_buffer() const
-            {
-                return this->data_;
-            }
-
-          private:
-            dimensions dimensions_{};
-            std::vector<uint8_t> data_{};
-        };
-
-        struct overlay : utils::object, browser_handler
-        {
-            using concurrent_buffer = utils::concurrency::container<buffer>;
+            using concurrent_buffer = utils::concurrency::container<frame_buffer>;
             using shared_buffer = std::shared_ptr<concurrent_buffer>;
 
             shared_buffer buffer_{std::make_shared<concurrent_buffer>()};
             std::list<std::unique_ptr<backend>> backends{};
 
-            cef_ui ui{*this};
+            web_ui ui{};
 
             dimensions get_dimensions() override
             {
-                return this->buffer_->access<dimensions>([](const buffer& b) {
+                return this->buffer_->access<dimensions>([](const frame_buffer& b) {
                     return b.get_dimensions(); //
                 });
             }
 
             void paint(const std::span<const uint8_t> data, const dimensions dim) override
             {
-                return this->buffer_->access([&](buffer& b) {
+                return this->buffer_->access([&](frame_buffer& b) {
                     auto image_buffer = b.get_buffer();
 
                     if (b.get_dimensions() != dim             //
@@ -117,6 +66,8 @@ namespace gameoverlay
                 backends.emplace_back(d3d9::create_backend(this->make_handler()));
                 backends.emplace_back(dxgi::create_backend(this->make_handler()));
                 backends.emplace_back(opengl::create_backend(this->make_handler()));
+
+                ui.create_browser(*this, "https://google.com");
             }
 
             backend::owned_handler make_handler()
@@ -137,7 +88,7 @@ namespace gameoverlay
 
                     void on_frame(const renderer&, canvas& c) override
                     {
-                        this->buffer_->access([&](buffer& b) {
+                        this->buffer_->access([&](frame_buffer& b) {
                             const auto target_dim = c.get_dimensions();
                             if (target_dim != b.get_dimensions())
                             {

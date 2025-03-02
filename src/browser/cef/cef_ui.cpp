@@ -23,13 +23,32 @@ namespace gameoverlay
         }
     }
 
+    cef_ui::cef_ui()
+    {
+        cef_loader::load_cef();
+
+        this->ui_thread_ = std::thread([this] {
+            this->ui_runner(); //
+        });
+    }
+
+    cef_ui::~cef_ui()
+    {
+        this->close_all_browsers();
+
+        if (this->ui_thread_.joinable())
+        {
+            this->ui_thread_.join();
+        }
+    }
+
     int cef_ui::run_process()
     {
         cef_loader::load_cef();
         return CefExecuteProcess(get_cef_main_args(), new cef_ui_app(), nullptr);
     }
 
-    void cef_ui::ui_runner(browser_handler& handler)
+    void cef_ui::ui_runner()
     {
         {
             CefSettings settings{};
@@ -56,47 +75,90 @@ namespace gameoverlay
 
             CefInitialize(get_cef_main_args(), settings, new cef_ui_app(), nullptr);
 
-            CefBrowserSettings browser_settings;
-            browser_settings.windowless_frame_rate = 60;
-
-            std::string url = "http://google.com";
-
-            CefWindowInfo window_info{};
-            window_info.SetAsWindowless(GetDesktopWindow());
-            window_info.windowless_rendering_enabled = TRUE;
-
-            this->browser_ = CefBrowserHost::CreateBrowserSync(window_info, new cef_ui_handler(handler), url,
-                                                               browser_settings, nullptr, nullptr);
-
             CefRunMessageLoop();
-            this->browser_ = nullptr;
+
+            if (!this->browsers_.empty())
+            {
+                assert(false && "All browsers should have been destroyed!");
+                this->browsers_.clear();
+            }
         }
         CefShutdown();
     }
 
-    void cef_ui::invoke_close_browser(const CefRefPtr<CefBrowser>& browser)
+    void cef_ui::close_all_browsers()
     {
-        if (!browser)
+        if (!CefCurrentlyOn(TID_UI))
         {
+            post_on_ui([this] {
+                this->close_all_browsers(); //
+            });
+
             return;
         }
 
-        browser->GetHost()->CloseBrowser(true);
+        if (this->browsers_.empty())
+        {
+            CefQuitMessageLoop();
+            return;
+        }
+
+        const auto browsers = this->browsers_;
+
+        for (const auto& browser : browsers)
+        {
+            browser->GetHost()->CloseBrowser(true);
+        }
     }
 
-    void cef_ui::close_browser()
+    void cef_ui::remove_browser(const CefRefPtr<CefBrowser>& browser)
     {
-        if (!this->browser_)
+        CEF_REQUIRE_UI_THREAD()
+
+        for (auto i = this->browsers_.begin(); i != this->browsers_.end();)
         {
+            if ((*i)->IsSame(browser))
+            {
+                i = this->browsers_.erase(i);
+            }
+            else
+            {
+                ++i;
+            }
+        }
+
+        if (this->browsers_.empty())
+        {
+            CefQuitMessageLoop();
+        }
+    }
+
+    void cef_ui::store_browser(CefRefPtr<CefBrowser> browser)
+    {
+        CEF_REQUIRE_UI_THREAD()
+        this->browsers_.push_back(std::move(browser));
+    }
+
+    void cef_ui::create_browser(web_ui_handler& handler, std::string url)
+    {
+        if (!CefCurrentlyOn(TID_UI))
+        {
+            post_on_ui([this, &handler, u = std::move(url)] {
+                this->create_browser(handler, std::move(u)); //
+            });
+
             return;
         }
 
-        auto browser = this->browser_;
-        this->browser_ = nullptr;
+        CefBrowserSettings browser_settings;
+        browser_settings.windowless_frame_rate = 60;
 
-        post_on_ui([&, b = std::move(browser)] {
-            invoke_close_browser(b); //
-        });
+        CefWindowInfo window_info{};
+        window_info.SetAsWindowless(GetDesktopWindow());
+        window_info.windowless_rendering_enabled = TRUE;
+
+        CefBrowserHost::CreateBrowser(window_info, new cef_ui_handler(*this, handler), url, browser_settings, nullptr,
+                                      nullptr);
     }
 
     void cef_ui::post_on_ui(std::function<void()> callback)
@@ -123,27 +185,5 @@ namespace gameoverlay
                                },
                                std::move(callback)),
                            ms.count());
-    }
-
-    cef_ui::cef_ui(browser_handler& handler)
-    {
-        cef_loader::load_cef();
-
-        this->ui_thread_ = std::thread([this, &handler] {
-            this->ui_runner(handler); //
-        });
-    }
-
-    cef_ui::~cef_ui()
-    {
-        if (this->browser_)
-        {
-            this->close_browser();
-        }
-
-        if (this->ui_thread_.joinable())
-        {
-            this->ui_thread_.join();
-        }
     }
 }
