@@ -13,6 +13,7 @@ add_subdirectory(glew)
 
 include(cef.cmake)
 include(dxsdk.cmake)
+include(dx8sdk.cmake)
 
 ##########################################
 

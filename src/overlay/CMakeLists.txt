@@ -13,6 +13,7 @@ momo_assign_source_group(${SRC_FILES})
 
 target_link_libraries(overlay PUBLIC
   backend
+  backend-d3d8
   backend-d3d9
   backend-dxgi
   backend-opengl
