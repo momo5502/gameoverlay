@@ -41,10 +41,7 @@ struct fixed_canvas : canvas
     }
 
     fixed_canvas(const uint32_t width, const uint32_t height)
-        : fixed_canvas({
-              .width = width,
-              .height = height,
-          })
+        : fixed_canvas(dimensions{width, height})
     {
     }
 

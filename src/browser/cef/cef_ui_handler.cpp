@@ -10,18 +10,15 @@ namespace gameoverlay
         : handler_(&handler)
     {
         this->thread_ = std::thread([this] {
-            uint32_t last_width{0};
-            uint32_t last_height{0};
+            dimensions last_dim{};
 
             while (!this->stop_)
             {
-                const auto new_width = this->handler_->get_width();
-                const auto new_height = this->handler_->get_height();
+                const auto dim = this->handler_->get_dimensions();
 
-                if (last_height != new_height || last_width != new_width)
+                if (last_dim != dim)
                 {
-                    last_height = new_height;
-                    last_width = new_width;
+                    last_dim = dim;
 
                     cef_ui::post_on_ui([this] {
                         this->trigger_resize(); //
@@ -137,12 +134,11 @@ namespace gameoverlay
 
     void cef_ui_handler::GetViewRect(CefRefPtr<CefBrowser> /*browser*/, CefRect& rect)
     {
-        const auto width = static_cast<int>(this->handler_->get_width());
-        const auto height = static_cast<int>(this->handler_->get_height());
+        const auto dimensions = this->handler_->get_dimensions();
 
-        if (width > 0 && height > 0)
+        if (dimensions.is_non_zero())
         {
-            rect.Set(0, 0, width, height);
+            rect.Set(0, 0, static_cast<int>(dimensions.width), static_cast<int>(dimensions.height));
             return;
         }
 
@@ -152,10 +148,18 @@ namespace gameoverlay
     void cef_ui_handler::OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType /*type*/,
                                  const RectList& /*dirty_rects*/, const void* buffer, const int width, const int height)
     {
-        if (this->handler_->get_width() == static_cast<uint32_t>(width) &&
-            this->handler_->get_height() == static_cast<uint32_t>(height))
+        if (width < 0 || height < 0)
         {
-            this->handler_->paint(buffer, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+            return;
+        }
+
+        const dimensions dim(width, height);
+        const auto target_dim = this->handler_->get_dimensions();
+
+        if (dim == target_dim)
+        {
+            const std::span data(static_cast<const uint8_t*>(buffer), static_cast<size_t>(4) * width * height);
+            this->handler_->paint(data, dim);
         }
         else
         {

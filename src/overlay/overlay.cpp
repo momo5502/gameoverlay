@@ -32,8 +32,9 @@ namespace gameoverlay
 
                 const auto old_data = std::move(this->data_);
 
-                this->data_ =
-                    std::vector<uint8_t>(static_cast<size_t>(4) * new_dimensions.width * new_dimensions.height);
+                constexpr size_t pixel_size = 4;
+
+                this->data_ = std::vector<uint8_t>(pixel_size * new_dimensions.width * new_dimensions.height);
 
                 if (this->data_.empty() || old_data.empty())
                 {
@@ -42,10 +43,10 @@ namespace gameoverlay
 
                 for (uint32_t row = 0; row < std::min(new_dimensions.height, old_dimensions.height); ++row)
                 {
-                    auto* old_row = old_data.data() + row * old_dimensions.width * 4;
-                    auto* new_row = this->data_.data() + row * new_dimensions.width * 4;
+                    auto* old_row = old_data.data() + pixel_size * row * old_dimensions.width;
+                    auto* new_row = this->data_.data() + pixel_size * row * new_dimensions.width;
 
-                    memcpy(new_row, old_row, std::min(new_dimensions.width, old_dimensions.width) * 4);
+                    memcpy(new_row, old_row, pixel_size * std::min(new_dimensions.width, old_dimensions.width));
                 }
             }
 
@@ -79,34 +80,29 @@ namespace gameoverlay
 
             cef_ui ui{*this};
 
-            uint32_t get_height() override
+            dimensions get_dimensions() override
             {
-                return this->buffer_->access<uint32_t>([](const buffer& b) {
-                    return b.get_dimensions().height; //
+                return this->buffer_->access<dimensions>([](const buffer& b) {
+                    return b.get_dimensions(); //
                 });
             }
 
-            uint32_t get_width() override
-            {
-                return this->buffer_->access<uint32_t>([](const buffer& b) {
-                    return b.get_dimensions().width; //
-                });
-            }
-
-            void paint(const void* data, const uint32_t width, const uint32_t height) override
+            void paint(const std::span<const uint8_t> data, const dimensions dim) override
             {
                 return this->buffer_->access([&](buffer& b) {
-                    if (b.get_dimensions() != dimensions{.width = width, .height = height})
+                    auto image_buffer = b.get_buffer();
+
+                    if (b.get_dimensions() != dim             //
+                        || data.size() != image_buffer.size() //
+                        || data.size() != dim.get_area() * 4)
                     {
                         return;
                     }
 
-                    auto image_buffer = b.get_buffer();
-
-                    for (size_t i = 0; i < static_cast<size_t>(1) * width * height; ++i)
+                    for (size_t i = 0; i < dim.get_area(); ++i)
                     {
                         auto* dest_pixel = image_buffer.data() + (i * 4);
-                        auto* src_pixel = static_cast<const uint8_t*>(data) + (i * 4);
+                        auto* src_pixel = data.data() + (i * 4);
 
                         dest_pixel[0] = src_pixel[2];
                         dest_pixel[1] = src_pixel[1];
