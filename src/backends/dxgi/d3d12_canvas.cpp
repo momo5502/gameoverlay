@@ -5,6 +5,7 @@
 #include <DirectXMath.h>
 
 #include "dxgi_utils.hpp"
+#include "utils/hook.hpp"
 
 namespace gameoverlay::dxgi
 {
@@ -69,6 +70,8 @@ namespace gameoverlay::dxgi
 
             return shader_blob;
         }
+
+        CComPtr<ID3D12CommandQueue> g_command_queue{};
 
         CComPtr<ID3D12RootSignature> create_root_signature(ID3D12Device& device)
         {
@@ -143,13 +146,23 @@ namespace gameoverlay::dxgi
             layout.NumElements = ARRAYSIZE(elements);
             layout.pInputElementDescs = elements;
 
+            D3D12_BLEND_DESC blend_desc = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+            blend_desc.RenderTarget[0].BlendEnable = TRUE;
+            blend_desc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+            blend_desc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+            blend_desc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+            blend_desc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ZERO;
+            blend_desc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+            blend_desc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+            blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
             D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc{};
             pso_desc.InputLayout = layout;
             pso_desc.pRootSignature = &root_signature;
             pso_desc.VS = {vs_blob.GetBufferPointer(), vs_blob.GetBufferSize()};
             pso_desc.PS = {ps_blob.GetBufferPointer(), ps_blob.GetBufferSize()};
             pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-            pso_desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+            pso_desc.BlendState = blend_desc;
             pso_desc.DepthStencilState.DepthEnable = FALSE;
             pso_desc.DepthStencilState.StencilEnable = FALSE;
             pso_desc.SampleMask = UINT_MAX;
@@ -269,6 +282,19 @@ namespace gameoverlay::dxgi
         }
     }
 
+    utils::hook::detour exhook{};
+
+    void STDMETHODCALLTYPE ExecuteCommandListsStub(ID3D12CommandQueue* self, _In_ UINT NumCommandLists,
+                                                   _In_reads_(NumCommandLists) ID3D12CommandList* const* ppCommandLists)
+    {
+        if (!g_command_queue)
+        {
+            g_command_queue = self;
+        }
+
+        exhook.invoke_stdcall(self, NumCommandLists, ppCommandLists);
+    }
+
     d3d12_canvas::d3d12_canvas(IDXGISwapChain3& swap_chain)
         : swap_chain_(&swap_chain),
           frame_index_(swap_chain.GetCurrentBackBufferIndex()),
@@ -280,7 +306,16 @@ namespace gameoverlay::dxgi
         queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-        device_->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue_));
+        static const auto x = [&] {
+            CComPtr<ID3D12CommandQueue> command_queue{};
+            device_->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue));
+
+            auto* entry = *utils::hook::get_vtable_entry(&*command_queue, &ID3D12CommandQueue::ExecuteCommandLists);
+            exhook.create(entry, ExecuteCommandListsStub);
+
+            return 0;
+        }();
+
         device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&command_allocator_));
         device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator_, nullptr,
                                    IID_PPV_ARGS(&command_list_));
@@ -393,6 +428,18 @@ namespace gameoverlay::dxgi
             return;
         }
 
+        viewport_.TopLeftX = 0;
+        viewport_.TopLeftY = 0;
+        viewport_.Width = static_cast<FLOAT>(new_dimensions.width);
+        viewport_.Height = static_cast<FLOAT>(new_dimensions.height);
+        viewport_.MinDepth = D3D12_MIN_DEPTH;
+        viewport_.MaxDepth = D3D12_MAX_DEPTH;
+
+        scissor_rect_.left = 0;
+        scissor_rect_.top = 0;
+        scissor_rect_.right = static_cast<LONG>(new_dimensions.width);
+        scissor_rect_.bottom = static_cast<LONG>(new_dimensions.height);
+
         auto [tex, upload] = create_texture_2d(*device_, new_dimensions, DXGI_FORMAT_R8G8B8A8_UNORM);
         this->texture_ = tex;
         this->upload_buffer_ = upload;
@@ -403,14 +450,17 @@ namespace gameoverlay::dxgi
         srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels = 1;
 
-        device_->CreateShaderResourceView(texture_, &srv_desc,
-                                          CD3DX12_CPU_DESCRIPTOR_HANDLE(srv_heap_->GetCPUDescriptorHandleForHeapStart(),
-                                                                        0, srv_descriptor_size_)); // TODO
+        device_->CreateShaderResourceView(texture_, &srv_desc, srv_heap_->GetCPUDescriptorHandleForHeapStart()); // TODO
 
         translate_vertices(*vertex_buffer_, 0, 0, ~0UL, new_dimensions);
     }
 
     void d3d12_canvas::paint(const std::span<const uint8_t> image)
+    {
+        this->buffer.assign(image.begin(), image.end());
+    }
+
+    void d3d12_canvas::paint_i(const std::span<const uint8_t> image) const
     {
         if (!texture_ || image.size() != this->get_buffer_size())
         {
@@ -432,6 +482,16 @@ namespace gameoverlay::dxgi
 
     void d3d12_canvas::draw() const
     {
+        if (g_command_queue)
+        {
+            this->command_queue_ = g_command_queue;
+        }
+
+        if (!command_queue_)
+        {
+            return;
+        }
+
         frame_index_ = swap_chain_->GetCurrentBackBufferIndex();
 
         command_allocator_->Reset();
@@ -445,6 +505,11 @@ namespace gameoverlay::dxgi
 
     void d3d12_canvas::after_draw()
     {
+        if (!command_queue_)
+        {
+            return;
+        }
+
         const UINT64 fenceValue = fence_value_;
         auto hr = command_queue_->Signal(fence_, fenceValue);
         if (FAILED(hr))
@@ -485,6 +550,11 @@ namespace gameoverlay::dxgi
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtv_heap_->GetCPUDescriptorHandleForHeapStart(), frame_index_,
                                                 rtv_descriptor_size_);
         command_list_->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+
+        if (!this->buffer.empty())
+        {
+            this->paint_i(this->buffer);
+        }
 
         command_list_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
