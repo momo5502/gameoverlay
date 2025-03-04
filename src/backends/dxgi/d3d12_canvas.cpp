@@ -164,15 +164,25 @@ namespace gameoverlay::dxgi
             DXGI_SWAP_CHAIN_DESC1 desc;
             swap_chain.GetDesc1(&desc);
 
+            CD3DX12_RASTERIZER_DESC rasterizer_desc(D3D12_DEFAULT);
+            rasterizer_desc.FillMode = D3D12_FILL_MODE_SOLID;
+            rasterizer_desc.CullMode = D3D12_CULL_MODE_NONE;
+            rasterizer_desc.FrontCounterClockwise = TRUE;
+
+            CD3DX12_DEPTH_STENCIL_DESC depth_stencil_desc(D3D12_DEFAULT);
+            depth_stencil_desc.DepthEnable = false;
+            depth_stencil_desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+            depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+            depth_stencil_desc.StencilEnable = false;
+
             D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc{};
             pso_desc.InputLayout = layout;
             pso_desc.pRootSignature = &root_signature;
             pso_desc.VS = {vs_blob.GetBufferPointer(), vs_blob.GetBufferSize()};
             pso_desc.PS = {ps_blob.GetBufferPointer(), ps_blob.GetBufferSize()};
-            pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+            pso_desc.RasterizerState = rasterizer_desc;
             pso_desc.BlendState = blend_desc;
-            pso_desc.DepthStencilState.DepthEnable = FALSE;
-            pso_desc.DepthStencilState.StencilEnable = FALSE;
+            pso_desc.DepthStencilState = depth_stencil_desc;
             pso_desc.SampleMask = UINT_MAX;
             pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             pso_desc.NumRenderTargets = 1;
