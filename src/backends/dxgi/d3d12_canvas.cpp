@@ -3,8 +3,11 @@
 #include <stdexcept>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
+#include <set>
 
 #include "dxgi_utils.hpp"
+#include "utils/concurrency.hpp"
+#include "utils/finally.hpp"
 #include "utils/hook.hpp"
 
 namespace gameoverlay::dxgi
@@ -71,7 +74,8 @@ namespace gameoverlay::dxgi
             return shader_blob;
         }
 
-        CComPtr<ID3D12CommandQueue> g_command_queue{};
+        using queue_map = std::set<CComPtr<ID3D12CommandQueue>>;
+        utils::concurrency::container<queue_map> g_command_queue{};
 
         CComPtr<ID3D12RootSignature> create_root_signature(ID3D12Device& device)
         {
@@ -134,7 +138,8 @@ namespace gameoverlay::dxgi
         }
 
         CComPtr<ID3D12PipelineState> create_pipeline_state(ID3D12Device& device, ID3D12RootSignature& root_signature,
-                                                           ID3DBlob& vs_blob, ID3DBlob& ps_blob)
+                                                           ID3DBlob& vs_blob, ID3DBlob& ps_blob,
+                                                           IDXGISwapChain3& swap_chain)
         {
             D3D12_INPUT_ELEMENT_DESC elements[] = {
                 {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -156,6 +161,9 @@ namespace gameoverlay::dxgi
             blend_desc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
             blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
+            DXGI_SWAP_CHAIN_DESC1 desc;
+            swap_chain.GetDesc1(&desc);
+
             D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc{};
             pso_desc.InputLayout = layout;
             pso_desc.pRootSignature = &root_signature;
@@ -168,7 +176,7 @@ namespace gameoverlay::dxgi
             pso_desc.SampleMask = UINT_MAX;
             pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             pso_desc.NumRenderTargets = 1;
-            pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+            pso_desc.RTVFormats[0] = desc.Format;
             pso_desc.SampleDesc.Count = 1;
 
             CComPtr<ID3D12PipelineState> pipeline_state{};
@@ -219,7 +227,7 @@ namespace gameoverlay::dxgi
             resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
             resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-            auto t1 = create_buffer(device, heap_properties, resource_desc, D3D12_RESOURCE_STATE_COPY_DEST);
+            auto t1 = create_buffer(device, heap_properties, resource_desc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
             const UINT64 uploadBufferSize = GetRequiredIntermediateSize(t1, 0, 1);
 
@@ -287,9 +295,14 @@ namespace gameoverlay::dxgi
     void STDMETHODCALLTYPE ExecuteCommandListsStub(ID3D12CommandQueue* self, _In_ UINT NumCommandLists,
                                                    _In_reads_(NumCommandLists) ID3D12CommandList* const* ppCommandLists)
     {
-        if (!g_command_queue)
+        CComPtr<ID3D12Device> dev{};
+        self->GetDevice(IID_PPV_ARGS(&dev));
+
+        if (dev)
         {
-            g_command_queue = self;
+            g_command_queue.access([&](queue_map& m) {
+                m.insert(self); //
+            });
         }
 
         exhook.invoke_stdcall(self, NumCommandLists, ppCommandLists);
@@ -297,8 +310,7 @@ namespace gameoverlay::dxgi
 
     d3d12_canvas::d3d12_canvas(IDXGISwapChain3& swap_chain)
         : swap_chain_(&swap_chain),
-          frame_index_(swap_chain.GetCurrentBackBufferIndex()),
-          fence_value_(0)
+          fence_value_(1)
     {
         this->device_ = get_device<ID3D12Device>(swap_chain);
 
@@ -312,7 +324,14 @@ namespace gameoverlay::dxgi
 
             auto* entry = *utils::hook::get_vtable_entry(&*command_queue, &ID3D12CommandQueue::ExecuteCommandLists);
             exhook.create(entry, ExecuteCommandListsStub);
-
+            /*  CreateThread(
+                  nullptr, 0,
+                  +[](void* ptr) -> DWORD {
+                      MessageBoxA(0, 0, 0, 0);
+                      exhook.create(ptr, ExecuteCommandListsStub);
+                      return 0;
+                  },
+                  entry, 0, 0);*/
             return 0;
         }();
 
@@ -322,6 +341,7 @@ namespace gameoverlay::dxgi
 
         rtv_heap_ =
             create_descriptor_heap(*device_, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 2);
+
         srv_heap_ = create_descriptor_heap(*device_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
                                            D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1);
 
@@ -331,25 +351,12 @@ namespace gameoverlay::dxgi
         DXGI_SWAP_CHAIN_DESC swap_chain_desc{};
         swap_chain.GetDesc(&swap_chain_desc);
 
-        for (UINT i = 0; i < 2; ++i)
-        {
-            swap_chain.GetBuffer(i, IID_PPV_ARGS(&render_targets_[i]));
-            device_->CreateRenderTargetView(
-                render_targets_[i], nullptr,
-                CD3DX12_CPU_DESCRIPTOR_HANDLE(rtv_heap_->GetCPUDescriptorHandleForHeapStart(), i,
-                                              rtv_descriptor_size_));
-        }
-
         load_pipeline();
         load_assets();
 
         device_->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_));
-        fence_event_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
-        if (!fence_event_)
-        {
-            throw std::runtime_error("Failed to create fence event");
-        }
+        this->command_list_->Close();
     }
 
     d3d12_canvas::d3d12_canvas(IDXGISwapChain3& swap_chain, const dimensions dim)
@@ -364,7 +371,7 @@ namespace gameoverlay::dxgi
         auto ps_blob = compile_shader(pixel_shader_src, "ps_5_0", "PS");
 
         root_signature_ = create_root_signature(*device_);
-        pipeline_state_ = create_pipeline_state(*device_, *root_signature_, *vs_blob, *ps_blob);
+        pipeline_state_ = create_pipeline_state(*device_, *root_signature_, *vs_blob, *ps_blob, *swap_chain_);
     }
 
     void d3d12_canvas::load_assets()
@@ -423,11 +430,6 @@ namespace gameoverlay::dxgi
 
     void d3d12_canvas::resize_texture(const dimensions new_dimensions)
     {
-        if (new_dimensions.is_zero())
-        {
-            return;
-        }
-
         viewport_.TopLeftX = 0;
         viewport_.TopLeftY = 0;
         viewport_.Width = static_cast<FLOAT>(new_dimensions.width);
@@ -467,6 +469,11 @@ namespace gameoverlay::dxgi
             return;
         }
 
+        D3D12_RESOURCE_BARRIER textureTransitionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+            texture_, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
+
+        command_list_->ResourceBarrier(1, &textureTransitionBarrier);
+
         D3D12_SUBRESOURCE_DATA textureData = {};
         textureData.pData = image.data();
         textureData.RowPitch = this->get_width() * 4;
@@ -474,41 +481,58 @@ namespace gameoverlay::dxgi
 
         UpdateSubresources(command_list_, texture_, this->upload_buffer_, 0, 0, 1, &textureData);
 
-        D3D12_RESOURCE_BARRIER textureTransitionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        D3D12_RESOURCE_BARRIER textureTransitionBarrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
             texture_, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-        command_list_->ResourceBarrier(1, &textureTransitionBarrier);
+        command_list_->ResourceBarrier(1, &textureTransitionBarrier2);
     }
 
     void d3d12_canvas::draw() const
     {
-        if (g_command_queue)
-        {
-            this->command_queue_ = g_command_queue;
-        }
-
         if (!command_queue_)
         {
+            g_command_queue.access([&](queue_map& m) {
+                if (m.empty())
+                {
+                    return;
+                }
+
+                // command_queue_ = *m.begin();
+
+                for (auto& queue : m)
+                {
+                    constexpr size_t offset = 0x120;
+                    constexpr size_t entry = offset / sizeof(void*);
+                    constexpr size_t limit = entry + 20;
+
+                    const auto* values = reinterpret_cast<ID3D12CommandQueue**>(&*this->swap_chain_);
+
+                    for (size_t i = 0; i < limit; ++i)
+                    {
+                        if (values[i] == queue)
+                        {
+                            command_queue_ = queue;
+                            m.clear();
+                            return;
+                        }
+                    }
+                }
+            });
+
             return;
         }
 
-        frame_index_ = swap_chain_->GetCurrentBackBufferIndex();
+        this->wait_for_gpu();
 
         command_allocator_->Reset();
         command_list_->Reset(command_allocator_, pipeline_state_);
 
         populate_command_list();
-
-        ID3D12CommandList* ppCommandLists[] = {command_list_};
-        command_queue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
     }
 
-    void d3d12_canvas::after_draw()
+    void d3d12_canvas::wait_for_gpu() const
     {
-        if (!command_queue_)
-        {
-            return;
-        }
+        auto completedValue = fence_->GetCompletedValue();
 
         const UINT64 fenceValue = fence_value_;
         auto hr = command_queue_->Signal(fence_, fenceValue);
@@ -519,20 +543,81 @@ namespace gameoverlay::dxgi
 
         ++fence_value_;
 
-        if (fence_->GetCompletedValue() < fenceValue)
+        completedValue = fence_->GetCompletedValue();
+
+        if (completedValue < fenceValue)
         {
-            hr = fence_->SetEventOnCompletion(fenceValue, fence_event_);
+            HANDLE eventHandle = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+            fence_->SetEventOnCompletion(fenceValue, eventHandle);
+            WaitForSingleObject(eventHandle, INFINITE);
+            CloseHandle(eventHandle);
+
+            /*hr = fence_->SetEventOnCompletion(fenceValue, fence_event_);
             if (FAILED(hr))
             {
                 return;
             }
 
-            WaitForSingleObject(fence_event_, INFINITE);
+            WaitForSingleObject(fence_event_, INFINITE);*/
         }
+    }
+
+    void d3d12_canvas::after_draw()
+    {
+        if (!command_queue_)
+        {
+            return;
+        }
+
+        return;
+        this->wait_for_gpu();
+    }
+
+    void d3d12_canvas::before_resize()
+    {
+        /* MessageBoxA(0, "before", 0, 0);
+         for (auto& tgt : render_targets_)
+         {
+             tgt.Release();
+         }*/
     }
 
     void d3d12_canvas::populate_command_list() const
     {
+        CComPtr<ID3D12Resource> render_target{};
+
+        const auto _ = utils::finally([&] {
+            command_list_->Close();
+
+            ID3D12CommandList* ppCommandLists[] = {command_list_};
+            command_queue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+        });
+
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtv_heap_->GetCPUDescriptorHandleForHeapStart());
+
+        const auto frame_index = swap_chain_->GetCurrentBackBufferIndex();
+
+        // for (UINT i = 0; i < 2; ++i)
+        {
+            const auto x = swap_chain_->GetBuffer(frame_index, IID_PPV_ARGS(&render_target));
+            if (FAILED(x) || !render_target)
+            {
+                puts("FAIL");
+                return;
+            }
+
+            D3D12_RESOURCE_DESC desc = render_target->GetDesc();
+
+            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+            rtvDesc.Format = desc.Format; // Match back buffer format!
+            rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+            rtvDesc.Texture2D.MipSlice = 0;
+
+            device_->CreateRenderTargetView(render_target, &rtvDesc, rtvHandle);
+
+            rtvHandle.Offset(1, rtv_descriptor_size_);
+        }
+
         command_list_->SetGraphicsRootSignature(root_signature_);
 
         ID3D12DescriptorHeap* ppHeaps[] = {srv_heap_};
@@ -543,18 +628,28 @@ namespace gameoverlay::dxgi
         command_list_->RSSetViewports(1, &viewport_);
         command_list_->RSSetScissorRects(1, &scissor_rect_);
 
-        D3D12_RESOURCE_BARRIER rtv1Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-            render_targets_[frame_index_], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-        command_list_->ResourceBarrier(1, &rtv1Barrier);
-
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtv_heap_->GetCPUDescriptorHandleForHeapStart(), frame_index_,
-                                                rtv_descriptor_size_);
-        command_list_->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
-
         if (!this->buffer.empty())
         {
             this->paint_i(this->buffer);
         }
+
+        D3D12_RESOURCE_BARRIER barrier{};
+        memset(&barrier, 0, sizeof(barrier));
+
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barrier.Transition.pResource = render_target;
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+        /* D3D12_RESOURCE_BARRIER rtv1Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+             render_targets_[frame_index_], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);*/
+        command_list_->ResourceBarrier(1, &barrier);
+
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle2(rtv_heap_->GetCPUDescriptorHandleForHeapStart(), 0,
+                                                 rtv_descriptor_size_);
+        command_list_->OMSetRenderTargets(1, &rtvHandle2, FALSE, nullptr);
 
         command_list_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -576,9 +671,7 @@ namespace gameoverlay::dxgi
 
         // Indicate that the back buffer will now be used to present.
         D3D12_RESOURCE_BARRIER rtv2Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-            render_targets_[frame_index_], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+            render_target, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
         command_list_->ResourceBarrier(1, &rtv2Barrier);
-
-        command_list_->Close();
     }
 }

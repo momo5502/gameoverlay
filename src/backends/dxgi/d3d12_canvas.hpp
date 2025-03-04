@@ -16,6 +16,8 @@ namespace gameoverlay::dxgi
         void paint_i(std::span<const uint8_t> image) const;
         void draw() const override;
         void after_draw() override;
+        void wait_for_gpu() const;
+        void before_resize() override;
 
       private:
         CComPtr<IDXGISwapChain3> swap_chain_{};
@@ -25,7 +27,7 @@ namespace gameoverlay::dxgi
         CComPtr<ID3D12CommandAllocator> command_allocator_{};
         CComPtr<ID3D12DescriptorHeap> rtv_heap_{};
         CComPtr<ID3D12DescriptorHeap> srv_heap_{};
-        CComPtr<ID3D12Resource> render_targets_[2]{};
+        // CComPtr<ID3D12Resource> render_targets_[2]{};
         CComPtr<ID3D12Resource> texture_{};
         CComPtr<ID3D12Resource> upload_buffer_{};
         CComPtr<ID3D12Resource> vertex_buffer_{};
@@ -36,7 +38,6 @@ namespace gameoverlay::dxgi
         D3D12_RECT scissor_rect_{};
         UINT rtv_descriptor_size_{};
         UINT srv_descriptor_size_{};
-        mutable UINT frame_index_{};
         HANDLE fence_event_{};
         CComPtr<ID3D12Fence> fence_{};
         mutable UINT64 fence_value_{};
