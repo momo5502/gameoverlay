@@ -25,6 +25,11 @@ namespace gameoverlay::dxgi
 
         void resize(const dimensions new_dimensions)
         {
+            if (new_dimensions.is_zero() || new_dimensions == this->dimensions_)
+            {
+                return;
+            }
+
             this->resize_texture(new_dimensions);
             this->dimensions_ = new_dimensions;
         }
