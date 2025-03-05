@@ -347,6 +347,70 @@ namespace gameoverlay::dxgi
 
             vertex_buffer.Unmap(0, nullptr);
         }
+
+        CComPtr<ID3D12Resource> get_render_target(IDXGISwapChain3& swap_chain)
+        {
+            CComPtr<ID3D12Resource> render_target{};
+
+            const auto frame_index = swap_chain.GetCurrentBackBufferIndex();
+            const auto res = swap_chain.GetBuffer(frame_index, IID_PPV_ARGS(&render_target));
+
+            if (FAILED(res) || !render_target)
+            {
+                throw std::runtime_error("Failed to get back buffer");
+            }
+
+            return render_target;
+        }
+
+        void create_render_target_view(ID3D12Device& device, ID3D12Resource& render_target,
+                                       const D3D12_CPU_DESCRIPTOR_HANDLE& descriptor_handle)
+        {
+            const D3D12_RESOURCE_DESC desc = render_target.GetDesc();
+
+            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+            rtvDesc.Format = desc.Format;
+            rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+            rtvDesc.Texture2D.MipSlice = 0;
+
+            device.CreateRenderTargetView(&render_target, &rtvDesc, descriptor_handle);
+        }
+
+        void copy_texture(ID3D12Device& device, ID3D12GraphicsCommandList& command_list, ID3D12Resource& destination,
+                          ID3D12Resource& source)
+        {
+            D3D12_RESOURCE_BARRIER barrier{};
+            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            barrier.Transition.pResource = &destination;
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+            command_list.ResourceBarrier(1, &barrier);
+
+            D3D12_TEXTURE_COPY_LOCATION dest_loc{};
+            dest_loc.pResource = &destination;
+            dest_loc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            dest_loc.PlacedFootprint = {};
+            dest_loc.SubresourceIndex = 0;
+
+            const auto desc = destination.GetDesc();
+            D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
+            device.GetCopyableFootprints(&desc, 0, 1, 0, &footprint, nullptr, nullptr, nullptr);
+
+            D3D12_TEXTURE_COPY_LOCATION src_loc{};
+            src_loc.pResource = &source;
+            src_loc.PlacedFootprint = footprint;
+            src_loc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+
+            command_list.CopyTextureRegion(&dest_loc, 0, 0, 0, &src_loc, nullptr);
+
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+
+            command_list.ResourceBarrier(1, &barrier);
+        }
     }
 
     utils::hook::detour exhook{};
@@ -368,9 +432,14 @@ namespace gameoverlay::dxgi
     }
 
     d3d12_canvas::d3d12_canvas(IDXGISwapChain3& swap_chain)
-        : swap_chain_(&swap_chain),
-          fence_value_(1)
+        : fence_event_(CreateEventA(nullptr, FALSE, FALSE, nullptr)),
+          swap_chain_(&swap_chain)
     {
+        if (!this->fence_event_)
+        {
+            throw std::runtime_error("Failed to create fence event");
+        }
+
         this->device_ = get_device<ID3D12Device>(swap_chain);
 
         D3D12_COMMAND_QUEUE_DESC queue_desc{};
@@ -379,33 +448,34 @@ namespace gameoverlay::dxgi
 
         static const auto x = [&] {
             CComPtr<ID3D12CommandQueue> command_queue{};
-            device_->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue));
+            this->device_->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue));
 
             auto* entry = *utils::hook::get_vtable_entry(&*command_queue, &ID3D12CommandQueue::ExecuteCommandLists);
             exhook.create(entry, ExecuteCommandListsStub);
             return 0;
         }();
 
-        device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&command_allocator_));
-        device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator_, nullptr,
-                                   IID_PPV_ARGS(&command_list_));
+        this->device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&this->command_allocator_));
+        this->device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, this->command_allocator_, nullptr,
+                                         IID_PPV_ARGS(&this->command_list_));
 
-        rtv_heap_ =
-            create_descriptor_heap(*device_, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 2);
+        this->rtv_heap_ =
+            create_descriptor_heap(*this->device_, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 2);
 
-        srv_heap_ = create_descriptor_heap(*device_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-                                           D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1);
+        this->srv_heap_ = create_descriptor_heap(*this->device_, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+                                                 D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 1);
 
-        rtv_descriptor_size_ = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-        srv_descriptor_size_ = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        this->rtv_descriptor_size_ = this->device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        this->srv_descriptor_size_ =
+            this->device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
         DXGI_SWAP_CHAIN_DESC swap_chain_desc{};
         swap_chain.GetDesc(&swap_chain_desc);
 
-        load_pipeline();
-        load_assets();
+        this->load_pipeline();
+        this->load_assets();
 
-        device_->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_));
+        this->device_->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&this->fence_));
 
         this->command_list_->Close();
     }
@@ -421,8 +491,9 @@ namespace gameoverlay::dxgi
         const auto vs_blob = compile_shader(vertex_shader_src, "vs_5_0", "VS");
         const auto ps_blob = compile_shader(pixel_shader_src, "ps_5_0", "PS");
 
-        root_signature_ = create_root_signature(*device_);
-        pipeline_state_ = create_pipeline_state(*device_, *root_signature_, *vs_blob, *ps_blob, *swap_chain_);
+        this->root_signature_ = create_root_signature(*this->device_);
+        this->pipeline_state_ =
+            create_pipeline_state(*this->device_, *this->root_signature_, *vs_blob, *ps_blob, *this->swap_chain_);
     }
 
     void d3d12_canvas::load_assets()
@@ -438,34 +509,35 @@ namespace gameoverlay::dxgi
 
         const auto index_buffer_desc = get_buffer_descriptor(sizeof(indices));
 
-        index_buffer_ = create_buffer(*device_, heap_properties, index_buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ);
+        this->index_buffer_ =
+            create_buffer(*this->device_, heap_properties, index_buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ);
 
         void* index_data_begin{};
         constexpr D3D12_RANGE read_range{0, 0};
-        index_buffer_->Map(0, &read_range, &index_data_begin);
+        this->index_buffer_->Map(0, &read_range, &index_data_begin);
         std::memcpy(index_data_begin, indices, sizeof(indices));
-        index_buffer_->Unmap(0, nullptr);
+        this->index_buffer_->Unmap(0, nullptr);
 
         const auto vertex_buffer_desc = get_buffer_descriptor(sizeof(vertex) * 4);
-        vertex_buffer_ =
-            create_buffer(*device_, heap_properties, vertex_buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ);
+        this->vertex_buffer_ =
+            create_buffer(*this->device_, heap_properties, vertex_buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ);
     }
 
     void d3d12_canvas::resize_texture(const dimensions new_dimensions)
     {
-        viewport_.TopLeftX = 0;
-        viewport_.TopLeftY = 0;
-        viewport_.Width = static_cast<FLOAT>(new_dimensions.width);
-        viewport_.Height = static_cast<FLOAT>(new_dimensions.height);
-        viewport_.MinDepth = D3D12_MIN_DEPTH;
-        viewport_.MaxDepth = D3D12_MAX_DEPTH;
+        this->viewport_.TopLeftX = 0;
+        this->viewport_.TopLeftY = 0;
+        this->viewport_.Width = static_cast<FLOAT>(new_dimensions.width);
+        this->viewport_.Height = static_cast<FLOAT>(new_dimensions.height);
+        this->viewport_.MinDepth = D3D12_MIN_DEPTH;
+        this->viewport_.MaxDepth = D3D12_MAX_DEPTH;
 
-        scissor_rect_.left = 0;
-        scissor_rect_.top = 0;
-        scissor_rect_.right = static_cast<LONG>(new_dimensions.width);
-        scissor_rect_.bottom = static_cast<LONG>(new_dimensions.height);
+        this->scissor_rect_.left = 0;
+        this->scissor_rect_.top = 0;
+        this->scissor_rect_.right = static_cast<LONG>(new_dimensions.width);
+        this->scissor_rect_.bottom = static_cast<LONG>(new_dimensions.height);
 
-        auto [tex, upload] = create_texture_2d(*device_, new_dimensions, DXGI_FORMAT_R8G8B8A8_UNORM);
+        auto [tex, upload] = create_texture_2d(*this->device_, new_dimensions, DXGI_FORMAT_R8G8B8A8_UNORM);
         this->texture_ = tex;
         this->upload_buffer_ = upload;
 
@@ -475,52 +547,31 @@ namespace gameoverlay::dxgi
         srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels = 1;
 
-        device_->CreateShaderResourceView(texture_, &srv_desc, srv_heap_->GetCPUDescriptorHandleForHeapStart());
+        const auto handle = this->srv_heap_->GetCPUDescriptorHandleForHeapStart();
+        this->device_->CreateShaderResourceView(this->texture_, &srv_desc, handle);
 
-        translate_vertices(*vertex_buffer_, 0, 0, ~0UL, new_dimensions);
+        translate_vertices(*this->vertex_buffer_, 0, 0, ~0UL, new_dimensions);
     }
 
     void d3d12_canvas::paint(const std::span<const uint8_t> image)
     {
-        this->buffer.assign(image.begin(), image.end());
-    }
-
-    void d3d12_canvas::paint_i(const std::span<const uint8_t> image) const
-    {
-        if (!texture_ || image.size() != this->get_buffer_size())
+        if (!this->upload_buffer_ || !this->texture_ || image.size() != this->get_buffer_size())
         {
             return;
         }
 
-        D3D12_RESOURCE_BARRIER barrier{};
-        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier.Transition.pResource = texture_;
-        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-        command_list_->ResourceBarrier(1, &barrier);
-
-        D3D12_TEXTURE_COPY_LOCATION dest_loc{};
-        dest_loc.pResource = texture_;
-        dest_loc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        dest_loc.PlacedFootprint = {};
-        dest_loc.SubresourceIndex = 0;
-
-        auto desc = this->texture_->GetDesc();
-
+        const auto desc = this->texture_->GetDesc();
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
         this->device_->GetCopyableFootprints(&desc, 0, 1, 0, &footprint, nullptr, nullptr, nullptr);
 
-        D3D12_TEXTURE_COPY_LOCATION src_loc{};
-        src_loc.pResource = this->upload_buffer_;
-        src_loc.PlacedFootprint = footprint;
-        src_loc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-
-        void* data_begin{};
+        void* destination{};
         constexpr D3D12_RANGE read_range{0, 0};
-        this->upload_buffer_->Map(0, &read_range, &data_begin);
+
+        const auto res = this->upload_buffer_->Map(0, &read_range, &destination);
+        if (FAILED(res))
+        {
+            throw std::runtime_error("Failed to update image");
+        }
 
         const auto height = this->get_height();
         const auto row_pitch = this->get_width() * 4;
@@ -528,25 +579,24 @@ namespace gameoverlay::dxgi
         for (size_t i = 0; i < height; ++i)
         {
             auto* src = image.data() + (i * row_pitch);
-            auto* dest = static_cast<uint8_t*>(data_begin) + footprint.Offset + (i * footprint.Footprint.RowPitch);
+            auto* dest = static_cast<uint8_t*>(destination) + footprint.Offset + (i * footprint.Footprint.RowPitch);
 
             std::memcpy(dest, src, row_pitch);
         }
 
         this->upload_buffer_->Unmap(0, nullptr);
-
-        this->command_list_->CopyTextureRegion(&dest_loc, 0, 0, 0, &src_loc, nullptr);
-
-        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
-        command_list_->ResourceBarrier(1, &barrier);
     }
 
     void d3d12_canvas::draw() const
     {
-        if (!command_queue_)
+        if (!this->texture_)
         {
+            return;
+        }
+
+        if (!this->command_queue_)
+        {
+            // TODO
             g_command_queue.access([&](queue_map& m) {
                 if (m.empty())
                 {
@@ -567,7 +617,7 @@ namespace gameoverlay::dxgi
                     {
                         if (values[i] == queue)
                         {
-                            command_queue_ = queue;
+                            this->command_queue_ = queue;
                             m.clear();
                             return;
                         }
@@ -580,81 +630,56 @@ namespace gameoverlay::dxgi
 
         this->wait_for_gpu();
 
-        command_allocator_->Reset();
-        command_list_->Reset(command_allocator_, pipeline_state_);
+        this->command_allocator_->Reset();
+        this->command_list_->Reset(this->command_allocator_, this->pipeline_state_);
 
-        populate_command_list();
+        {
+            const auto _ = utils::finally([&] {
+                this->command_list_->Close(); //
+            });
+
+            this->populate_command_list();
+        }
+
+        ID3D12CommandList* command_list = this->command_list_;
+        this->command_queue_->ExecuteCommandLists(1, &command_list);
     }
 
     void d3d12_canvas::wait_for_gpu() const
     {
-        auto completedValue = fence_->GetCompletedValue();
-
-        const UINT64 fenceValue = fence_value_;
-        const auto res = command_queue_->Signal(fence_, fenceValue);
+        const UINT64 target_fence_value = this->fence_value_++;
+        const auto res = this->command_queue_->Signal(fence_, target_fence_value);
         if (FAILED(res))
         {
             return;
         }
 
-        ++fence_value_;
+        const auto completed_value = this->fence_->GetCompletedValue();
 
-        completedValue = fence_->GetCompletedValue();
-
-        if (completedValue < fenceValue)
+        if (target_fence_value < completed_value)
         {
-            const HANDLE eventHandle = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-            fence_->SetEventOnCompletion(fenceValue, eventHandle);
-            WaitForSingleObject(eventHandle, INFINITE);
-            CloseHandle(eventHandle);
+            return;
         }
+
+        ResetEvent(this->fence_event_);
+        this->fence_->SetEventOnCompletion(target_fence_value, this->fence_event_);
+        WaitForSingleObject(this->fence_event_, INFINITE);
     }
 
     void d3d12_canvas::populate_command_list() const
     {
-        CComPtr<ID3D12Resource> render_target{};
+        const auto render_target = get_render_target(*this->swap_chain_);
+        const auto render_target_view_handle = this->rtv_heap_->GetCPUDescriptorHandleForHeapStart();
 
-        const auto _ = utils::finally([&] {
-            command_list_->Close();
+        create_render_target_view(*this->device_, *render_target, render_target_view_handle);
 
-            ID3D12CommandList* ppCommandLists[] = {command_list_};
-            command_queue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-        });
+        copy_texture(*this->device_, *this->command_list_, *this->texture_, *this->upload_buffer_);
 
-        const auto render_target_view_handle = rtv_heap_->GetCPUDescriptorHandleForHeapStart();
-
-        const auto frame_index = swap_chain_->GetCurrentBackBufferIndex();
-
-        const auto x = swap_chain_->GetBuffer(frame_index, IID_PPV_ARGS(&render_target));
-        if (FAILED(x) || !render_target)
-        {
-            puts("FAIL");
-            return;
-        }
-
-        D3D12_RESOURCE_DESC desc = render_target->GetDesc();
-
-        D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-        rtvDesc.Format = desc.Format; // Match back buffer format!
-        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-        rtvDesc.Texture2D.MipSlice = 0;
-
-        device_->CreateRenderTargetView(render_target, &rtvDesc, render_target_view_handle);
-
-        command_list_->SetGraphicsRootSignature(root_signature_);
-
-        ID3D12DescriptorHeap* ppHeaps[] = {srv_heap_};
-        command_list_->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-        command_list_->SetGraphicsRootDescriptorTable(0, srv_heap_->GetGPUDescriptorHandleForHeapStart());
-
-        command_list_->RSSetViewports(1, &viewport_);
-        command_list_->RSSetScissorRects(1, &scissor_rect_);
-
-        if (!this->buffer.empty())
-        {
-            this->paint_i(this->buffer);
-        }
+        this->command_list_->SetGraphicsRootSignature(this->root_signature_);
+        this->command_list_->SetDescriptorHeaps(1, &this->srv_heap_.p);
+        this->command_list_->SetGraphicsRootDescriptorTable(0, this->srv_heap_->GetGPUDescriptorHandleForHeapStart());
+        this->command_list_->RSSetViewports(1, &this->viewport_);
+        this->command_list_->RSSetScissorRects(1, &this->scissor_rect_);
 
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -664,30 +689,28 @@ namespace gameoverlay::dxgi
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
-        command_list_->ResourceBarrier(1, &barrier);
+        this->command_list_->ResourceBarrier(1, &barrier);
 
-        command_list_->OMSetRenderTargets(1, &render_target_view_handle, FALSE, nullptr);
-
-        command_list_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        this->command_list_->OMSetRenderTargets(1, &render_target_view_handle, FALSE, nullptr);
+        this->command_list_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view{};
-        vertex_buffer_view.BufferLocation = vertex_buffer_->GetGPUVirtualAddress();
+        vertex_buffer_view.BufferLocation = this->vertex_buffer_->GetGPUVirtualAddress();
         vertex_buffer_view.SizeInBytes = sizeof(vertex) * 4;
         vertex_buffer_view.StrideInBytes = sizeof(vertex);
 
-        command_list_->IASetVertexBuffers(0, 1, &vertex_buffer_view);
-
         D3D12_INDEX_BUFFER_VIEW index_buffer_view{};
-        index_buffer_view.BufferLocation = index_buffer_->GetGPUVirtualAddress();
+        index_buffer_view.BufferLocation = this->index_buffer_->GetGPUVirtualAddress();
         index_buffer_view.SizeInBytes = sizeof(DWORD) * 6;
         index_buffer_view.Format = DXGI_FORMAT_R32_UINT;
 
-        command_list_->IASetIndexBuffer(&index_buffer_view);
+        this->command_list_->IASetVertexBuffers(0, 1, &vertex_buffer_view);
+        this->command_list_->IASetIndexBuffer(&index_buffer_view);
 
-        command_list_->DrawIndexedInstanced(6, 1, 0, 0, 0);
+        this->command_list_->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-        command_list_->ResourceBarrier(1, &barrier);
+        this->command_list_->ResourceBarrier(1, &barrier);
     }
 }
