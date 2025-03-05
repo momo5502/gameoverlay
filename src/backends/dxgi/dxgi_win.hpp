@@ -2,8 +2,6 @@
 
 #include <utils/win.hpp>
 
-#define D3D_FEATURE_LEVEL_1_0_GENERIC
-
 #define D3D11_NO_HELPERS
 #include <dxgi.h>
 #include <dxgi1_5.h>
@@ -17,4 +15,3 @@
 #pragma comment(lib, "d3d10.lib")
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "D3DCompiler.lib")
-#pragma comment(lib, "dxguid.lib")
