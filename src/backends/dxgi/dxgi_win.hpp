@@ -9,7 +9,6 @@
 #include <dxgi1_5.h>
 #include <d3d11.h>
 #include <d3d12.h>
-#include "directx/d3dx12.h"
 #include <atlbase.h>
 
 #include <D3Dcompiler.h>

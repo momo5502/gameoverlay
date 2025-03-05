@@ -502,12 +502,40 @@ namespace gameoverlay::dxgi
 
         command_list_->ResourceBarrier(1, &barrier);
 
-        D3D12_SUBRESOURCE_DATA textureData = {};
-        textureData.pData = image.data();
-        textureData.RowPitch = this->get_width() * 4;
-        textureData.SlicePitch = textureData.RowPitch * this->get_height();
+        D3D12_TEXTURE_COPY_LOCATION dest_loc{};
+        dest_loc.pResource = texture_;
+        dest_loc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        dest_loc.PlacedFootprint = {};
+        dest_loc.SubresourceIndex = 0;
 
-        UpdateSubresources(command_list_, texture_, this->upload_buffer_, 0, 0, 1, &textureData); // TODO
+        auto desc = this->texture_->GetDesc();
+
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
+        this->device_->GetCopyableFootprints(&desc, 0, 1, 0, &footprint, nullptr, nullptr, nullptr);
+
+        D3D12_TEXTURE_COPY_LOCATION src_loc{};
+        src_loc.pResource = this->upload_buffer_;
+        src_loc.PlacedFootprint = footprint;
+        src_loc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+
+        void* data_begin{};
+        constexpr D3D12_RANGE read_range{0, 0};
+        this->upload_buffer_->Map(0, &read_range, &data_begin);
+
+        const auto height = this->get_height();
+        const auto row_pitch = this->get_width() * 4;
+
+        for (size_t i = 0; i < height; ++i)
+        {
+            auto* src = image.data() + (i * row_pitch);
+            auto* dest = static_cast<uint8_t*>(data_begin) + footprint.Offset + (i * footprint.Footprint.RowPitch);
+
+            std::memcpy(dest, src, row_pitch);
+        }
+
+        this->upload_buffer_->Unmap(0, nullptr);
+
+        this->command_list_->CopyTextureRegion(&dest_loc, 0, 0, 0, &src_loc, nullptr);
 
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
