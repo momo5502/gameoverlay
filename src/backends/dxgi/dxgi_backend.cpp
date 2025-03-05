@@ -39,18 +39,6 @@ namespace gameoverlay::dxgi
                 *swap_chain);
         }
 
-        void after_frame(IDXGISwapChain* swap_chain)
-        {
-            if (!swap_chain || !g_backend)
-            {
-                return;
-            }
-
-            g_backend->access_renderer(swap_chain, [](const dxgi_renderer& r) {
-                r.after_frame(); //
-            });
-        }
-
         void before_resize(IDXGISwapChain* swap_chain)
         {
             if (!swap_chain || !g_backend)
@@ -82,9 +70,7 @@ namespace gameoverlay::dxgi
         HRESULT WINAPI swap_chain_present_stub(IDXGISwapChain* swap_chain, const UINT sync_interval, const UINT flags)
         {
             draw_frame(swap_chain);
-            const auto res = get_hooks().swap_chain_present.invoke_stdcall<HRESULT>(swap_chain, sync_interval, flags);
-            after_frame(swap_chain);
-            return res;
+            return get_hooks().swap_chain_present.invoke_stdcall<HRESULT>(swap_chain, sync_interval, flags);
         }
     }
 

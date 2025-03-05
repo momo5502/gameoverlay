@@ -187,12 +187,4 @@ namespace gameoverlay::dxgi
             this->canvas_->before_resize();
         }
     }
-
-    void dxgi_renderer::after_frame() const
-    {
-        if (this->canvas_)
-        {
-            this->canvas_->after_draw();
-        }
-    }
 }

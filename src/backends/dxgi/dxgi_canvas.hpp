@@ -19,10 +19,6 @@ namespace gameoverlay::dxgi
         {
         }
 
-        virtual void after_draw()
-        {
-        }
-
         void resize(const dimensions new_dimensions)
         {
             if (new_dimensions.is_zero() || new_dimensions == this->dimensions_)

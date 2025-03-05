@@ -15,9 +15,6 @@ namespace gameoverlay::dxgi
         void paint(std::span<const uint8_t> image) override;
         void paint_i(std::span<const uint8_t> image) const;
         void draw() const override;
-        void after_draw() override;
-        void wait_for_gpu() const;
-        void before_resize() override;
 
       private:
         CComPtr<IDXGISwapChain3> swap_chain_{};
@@ -48,5 +45,6 @@ namespace gameoverlay::dxgi
         void load_pipeline();
         void load_assets();
         void populate_command_list() const;
+        void wait_for_gpu() const;
     };
 }

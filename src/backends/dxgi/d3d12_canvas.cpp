@@ -63,8 +63,8 @@ namespace gameoverlay::dxgi
         {
             CComPtr<ID3DBlob> shader_blob{};
             CComPtr<ID3DBlob> error_blob{};
-            auto res = D3DCompile(src.c_str(), src.size(), nullptr, nullptr, nullptr, entry_point.c_str(),
-                                  target.c_str(), 0, 0, &shader_blob, &error_blob);
+            const auto res = D3DCompile(src.c_str(), src.size(), nullptr, nullptr, nullptr, entry_point.c_str(),
+                                        target.c_str(), 0, 0, &shader_blob, &error_blob);
 
             if (FAILED(res))
             {
@@ -80,9 +80,6 @@ namespace gameoverlay::dxgi
         CComPtr<ID3D12RootSignature> create_root_signature(ID3D12Device& device)
         {
             D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-            // This is the highest version the sample supports.
-            // If CheckFeatureSupport succeeds, the HighestVersion
-            // returned will not be greater than this.
             featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
             const auto hr = device.CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData));
             if (FAILED(hr))
@@ -90,35 +87,45 @@ namespace gameoverlay::dxgi
                 featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
             }
 
-            CD3DX12_DESCRIPTOR_RANGE1 ranges[1] = {};
-            ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+            D3D12_DESCRIPTOR_RANGE1 range{};
+            range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+            range.NumDescriptors = 1;
+            range.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC;
+            range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-            CD3DX12_ROOT_PARAMETER1 rootParameters[1] = {};
-            rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+            D3D12_ROOT_PARAMETER1 root_parameter{};
+            root_parameter.DescriptorTable.NumDescriptorRanges = 1;
+            root_parameter.DescriptorTable.pDescriptorRanges = &range;
+            root_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+            root_parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-            D3D12_STATIC_SAMPLER_DESC sampler = {};
-            sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-            sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-            sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-            sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-            sampler.MipLODBias = 0;
-            sampler.MaxAnisotropy = 0;
-            sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-            sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-            sampler.MinLOD = 0.0f;
-            sampler.MaxLOD = D3D12_FLOAT32_MAX;
-            sampler.ShaderRegister = 0;
-            sampler.RegisterSpace = 0;
-            sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+            D3D12_STATIC_SAMPLER_DESC sampler_desc = {};
+            sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+            sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+            sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+            sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+            sampler_desc.MipLODBias = 0;
+            sampler_desc.MaxAnisotropy = 0;
+            sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+            sampler_desc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+            sampler_desc.MinLOD = 0.0f;
+            sampler_desc.MaxLOD = D3D12_FLOAT32_MAX;
+            sampler_desc.ShaderRegister = 0;
+            sampler_desc.RegisterSpace = 0;
+            sampler_desc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-            CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-            rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler,
-                                       D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+            D3D12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_desc{};
+            root_signature_desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+            root_signature_desc.Desc_1_1.NumParameters = 1;
+            root_signature_desc.Desc_1_1.pParameters = &root_parameter;
+            root_signature_desc.Desc_1_1.NumStaticSamplers = 1;
+            root_signature_desc.Desc_1_1.pStaticSamplers = &sampler_desc;
+            root_signature_desc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
             CComPtr<ID3DBlob> signature_blob{};
             CComPtr<ID3DBlob> error_blob{};
-            auto res = D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1,
-                                                             &signature_blob, &error_blob);
+            auto res = D3DX12SerializeVersionedRootSignature(&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1,
+                                                             &signature_blob, &error_blob); // TODO
 
             if (FAILED(res))
             {
@@ -141,6 +148,13 @@ namespace gameoverlay::dxgi
                                                            ID3DBlob& vs_blob, ID3DBlob& ps_blob,
                                                            IDXGISwapChain3& swap_chain)
         {
+            DXGI_SWAP_CHAIN_DESC1 desc;
+            auto res = swap_chain.GetDesc1(&desc);
+            if (FAILED(res))
+            {
+                throw std::runtime_error("Failed to get swap chain desc");
+            }
+
             D3D12_INPUT_ELEMENT_DESC elements[] = {
                 {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
                 {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -151,7 +165,7 @@ namespace gameoverlay::dxgi
             layout.NumElements = ARRAYSIZE(elements);
             layout.pInputElementDescs = elements;
 
-            D3D12_BLEND_DESC blend_desc = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+            D3D12_BLEND_DESC blend_desc{};
             blend_desc.RenderTarget[0].BlendEnable = TRUE;
             blend_desc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
             blend_desc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
@@ -161,36 +175,39 @@ namespace gameoverlay::dxgi
             blend_desc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
             blend_desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-            DXGI_SWAP_CHAIN_DESC1 desc;
-            swap_chain.GetDesc1(&desc);
-
-            CD3DX12_RASTERIZER_DESC rasterizer_desc(D3D12_DEFAULT);
+            D3D12_RASTERIZER_DESC rasterizer_desc{};
             rasterizer_desc.FillMode = D3D12_FILL_MODE_SOLID;
             rasterizer_desc.CullMode = D3D12_CULL_MODE_NONE;
             rasterizer_desc.FrontCounterClockwise = TRUE;
 
-            CD3DX12_DEPTH_STENCIL_DESC depth_stencil_desc(D3D12_DEFAULT);
+            D3D12_DEPTH_STENCIL_DESC depth_stencil_desc{};
             depth_stencil_desc.DepthEnable = false;
             depth_stencil_desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
             depth_stencil_desc.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
             depth_stencil_desc.StencilEnable = false;
 
-            D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc{};
-            pso_desc.InputLayout = layout;
-            pso_desc.pRootSignature = &root_signature;
-            pso_desc.VS = {vs_blob.GetBufferPointer(), vs_blob.GetBufferSize()};
-            pso_desc.PS = {ps_blob.GetBufferPointer(), ps_blob.GetBufferSize()};
-            pso_desc.RasterizerState = rasterizer_desc;
-            pso_desc.BlendState = blend_desc;
-            pso_desc.DepthStencilState = depth_stencil_desc;
-            pso_desc.SampleMask = UINT_MAX;
-            pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-            pso_desc.NumRenderTargets = 1;
-            pso_desc.RTVFormats[0] = desc.Format;
-            pso_desc.SampleDesc.Count = 1;
+            D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state_desc{};
+            pipeline_state_desc.InputLayout = layout;
+            pipeline_state_desc.pRootSignature = &root_signature;
+            pipeline_state_desc.RasterizerState = rasterizer_desc;
+            pipeline_state_desc.BlendState = blend_desc;
+            pipeline_state_desc.DepthStencilState = depth_stencil_desc;
+            pipeline_state_desc.SampleMask = UINT_MAX;
+            pipeline_state_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            pipeline_state_desc.NumRenderTargets = 1;
+            pipeline_state_desc.RTVFormats[0] = desc.Format;
+            pipeline_state_desc.SampleDesc.Count = 1;
+            pipeline_state_desc.VS = {
+                .pShaderBytecode = vs_blob.GetBufferPointer(),
+                .BytecodeLength = vs_blob.GetBufferSize(),
+            };
+            pipeline_state_desc.PS = {
+                .pShaderBytecode = ps_blob.GetBufferPointer(),
+                .BytecodeLength = ps_blob.GetBufferSize(),
+            };
 
             CComPtr<ID3D12PipelineState> pipeline_state{};
-            auto res = device.CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&pipeline_state));
+            res = device.CreateGraphicsPipelineState(&pipeline_state_desc, IID_PPV_ARGS(&pipeline_state));
 
             if (FAILED(res))
             {
@@ -206,8 +223,8 @@ namespace gameoverlay::dxgi
                                               const D3D12_CLEAR_VALUE* clear_value = nullptr)
         {
             CComPtr<ID3D12Resource> buffer{};
-            auto res = device.CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc,
-                                                      initial_state, clear_value, IID_PPV_ARGS(&buffer));
+            const auto res = device.CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &resource_desc,
+                                                            initial_state, clear_value, IID_PPV_ARGS(&buffer));
 
             if (FAILED(res))
             {
@@ -570,26 +587,6 @@ namespace gameoverlay::dxgi
 
             WaitForSingleObject(fence_event_, INFINITE);*/
         }
-    }
-
-    void d3d12_canvas::after_draw()
-    {
-        if (!command_queue_)
-        {
-            return;
-        }
-
-        return;
-        this->wait_for_gpu();
-    }
-
-    void d3d12_canvas::before_resize()
-    {
-        /* MessageBoxA(0, "before", 0, 0);
-         for (auto& tgt : render_targets_)
-         {
-             tgt.Release();
-         }*/
     }
 
     void d3d12_canvas::populate_command_list() const
