@@ -92,8 +92,8 @@ namespace gameoverlay::dxgi
             }
         }
 
-        std::unique_ptr<dxgi_canvas> create_canvas(IDXGISwapChain& swap_chain, const backend_type type,
-                                                   const dimensions dim)
+        std::unique_ptr<dxgi_canvas> create_canvas(d3d12_command_queue_store& store, IDXGISwapChain& swap_chain,
+                                                   const backend_type type, const dimensions dim)
         {
             switch (type)
             {
@@ -102,7 +102,7 @@ namespace gameoverlay::dxgi
             case backend_type::d3d11:
                 return std::make_unique<d3dx_canvas<d3d11_traits>>(swap_chain, dim);
             case backend_type::d3d12: {
-                return std::make_unique<d3d12_canvas>(*query_interface<IDXGISwapChain3>(swap_chain), dim);
+                return std::make_unique<d3d12_canvas>(store, *query_interface<IDXGISwapChain3>(swap_chain), dim);
             }
 
             default:
@@ -111,8 +111,9 @@ namespace gameoverlay::dxgi
         }
     }
 
-    dxgi_renderer::dxgi_renderer(owned_handler h, IDXGISwapChain& swap_chain)
+    dxgi_renderer::dxgi_renderer(owned_handler h, d3d12_command_queue_store& store, IDXGISwapChain& swap_chain)
         : renderer(std::move(h)),
+          store_(&store),
           window_(get_swap_chain_window(swap_chain)),
           swap_chain_(&swap_chain)
     {
@@ -160,7 +161,7 @@ namespace gameoverlay::dxgi
 
             try
             {
-                this->canvas_ = create_canvas(*this->swap_chain_, this->type_, dim);
+                this->canvas_ = create_canvas(*this->store_, *this->swap_chain_, this->type_, dim);
                 this->canvas_failed_ = false;
             }
             catch (const std::exception& e)

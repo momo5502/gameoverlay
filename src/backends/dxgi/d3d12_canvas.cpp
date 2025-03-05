@@ -187,10 +187,12 @@ namespace gameoverlay::dxgi
             pipeline_state_desc.NumRenderTargets = 1;
             pipeline_state_desc.RTVFormats[0] = desc.Format;
             pipeline_state_desc.SampleDesc.Count = 1;
+
             pipeline_state_desc.VS = {
                 .pShaderBytecode = vs_blob.GetBufferPointer(),
                 .BytecodeLength = vs_blob.GetBufferSize(),
             };
+
             pipeline_state_desc.PS = {
                 .pShaderBytecode = ps_blob.GetBufferPointer(),
                 .BytecodeLength = ps_blob.GetBufferSize(),
@@ -413,26 +415,9 @@ namespace gameoverlay::dxgi
         }
     }
 
-    utils::hook::detour exhook{};
-
-    void STDMETHODCALLTYPE ExecuteCommandListsStub(ID3D12CommandQueue* self, _In_ UINT NumCommandLists,
-                                                   _In_reads_(NumCommandLists) ID3D12CommandList* const* ppCommandLists)
-    {
-        CComPtr<ID3D12Device> dev{};
-        self->GetDevice(IID_PPV_ARGS(&dev));
-
-        if (dev)
-        {
-            g_command_queue.access([&](queue_map& m) {
-                m.insert(self); //
-            });
-        }
-
-        exhook.invoke_stdcall(self, NumCommandLists, ppCommandLists);
-    }
-
-    d3d12_canvas::d3d12_canvas(IDXGISwapChain3& swap_chain)
-        : fence_event_(CreateEventA(nullptr, FALSE, FALSE, nullptr)),
+    d3d12_canvas::d3d12_canvas(d3d12_command_queue_store& store, IDXGISwapChain3& swap_chain)
+        : store_(&store),
+          fence_event_(CreateEventA(nullptr, FALSE, FALSE, nullptr)),
           swap_chain_(&swap_chain)
     {
         if (!this->fence_event_)
@@ -441,19 +426,6 @@ namespace gameoverlay::dxgi
         }
 
         this->device_ = get_device<ID3D12Device>(swap_chain);
-
-        D3D12_COMMAND_QUEUE_DESC queue_desc{};
-        queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-        queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-
-        static const auto x = [&] {
-            CComPtr<ID3D12CommandQueue> command_queue{};
-            this->device_->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue));
-
-            auto* entry = *utils::hook::get_vtable_entry(&*command_queue, &ID3D12CommandQueue::ExecuteCommandLists);
-            exhook.create(entry, ExecuteCommandListsStub);
-            return 0;
-        }();
 
         this->device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&this->command_allocator_));
         this->device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, this->command_allocator_, nullptr,
@@ -480,8 +452,8 @@ namespace gameoverlay::dxgi
         this->command_list_->Close();
     }
 
-    d3d12_canvas::d3d12_canvas(IDXGISwapChain3& swap_chain, const dimensions dim)
-        : d3d12_canvas(swap_chain)
+    d3d12_canvas::d3d12_canvas(d3d12_command_queue_store& store, IDXGISwapChain3& swap_chain, const dimensions dim)
+        : d3d12_canvas(store, swap_chain)
     {
         this->resize(dim);
     }
@@ -596,36 +568,12 @@ namespace gameoverlay::dxgi
 
         if (!this->command_queue_)
         {
-            // TODO
-            g_command_queue.access([&](queue_map& m) {
-                if (m.empty())
-                {
-                    return;
-                }
+            this->command_queue_ = this->store_->find(*this->swap_chain_);
 
-                // command_queue_ = *m.begin();
-
-                for (auto& queue : m)
-                {
-                    constexpr size_t offset = 0x120;
-                    constexpr size_t entry = offset / sizeof(void*);
-                    constexpr size_t limit = entry + 20;
-
-                    const auto* values = reinterpret_cast<ID3D12CommandQueue**>(&*this->swap_chain_);
-
-                    for (size_t i = 0; i < limit; ++i)
-                    {
-                        if (values[i] == queue)
-                        {
-                            this->command_queue_ = queue;
-                            m.clear();
-                            return;
-                        }
-                    }
-                }
-            });
-
-            return;
+            if (!this->command_queue_)
+            {
+                return;
+            }
         }
 
         this->wait_for_gpu();

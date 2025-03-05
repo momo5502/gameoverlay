@@ -2,8 +2,9 @@
 
 #include "dxgi_win.hpp"
 #include "dxgi_canvas.hpp"
-#include <span>
+#include "d3d12_command_queue_store.hpp"
 
+#include <span>
 #include <utils/nt.hpp>
 
 namespace gameoverlay::dxgi
@@ -11,13 +12,15 @@ namespace gameoverlay::dxgi
     class d3d12_canvas : public dxgi_canvas
     {
       public:
-        d3d12_canvas(IDXGISwapChain3& swap_chain);
-        d3d12_canvas(IDXGISwapChain3& swap_chain, dimensions dim);
+        d3d12_canvas(d3d12_command_queue_store& store, IDXGISwapChain3& swap_chain);
+        d3d12_canvas(d3d12_command_queue_store& store, IDXGISwapChain3& swap_chain, dimensions dim);
 
         void paint(std::span<const uint8_t> image) override;
         void draw() const override;
 
       private:
+        d3d12_command_queue_store* store_{};
+
         utils::nt::handle<> fence_event_{};
 
         CComPtr<IDXGISwapChain3> swap_chain_{};
