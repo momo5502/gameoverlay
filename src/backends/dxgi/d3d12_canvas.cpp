@@ -234,6 +234,23 @@ namespace gameoverlay::dxgi
             return buffer;
         }
 
+        D3D12_RESOURCE_DESC get_buffer_descriptor(const uint64_t size)
+        {
+            D3D12_RESOURCE_DESC buffer_desc{};
+            buffer_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+            buffer_desc.Width = size;
+            buffer_desc.Height = 1;
+            buffer_desc.DepthOrArraySize = 1;
+            buffer_desc.MipLevels = 1;
+            buffer_desc.Format = DXGI_FORMAT_UNKNOWN;
+            buffer_desc.SampleDesc.Count = 1;
+            buffer_desc.SampleDesc.Quality = 0;
+            buffer_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+            buffer_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+            return buffer_desc;
+        }
+
         std::pair<CComPtr<ID3D12Resource>, CComPtr<ID3D12Resource>> create_texture_2d(ID3D12Device& device,
                                                                                       const dimensions dim,
                                                                                       const DXGI_FORMAT format)
@@ -256,13 +273,17 @@ namespace gameoverlay::dxgi
 
             auto t1 = create_buffer(device, heap_properties, resource_desc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(t1, 0, 1);
+            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(t1, 0, 1); // TODO
 
-            // Create the GPU upload buffer.
-            D3D12_HEAP_PROPERTIES uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-            D3D12_RESOURCE_DESC uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+            D3D12_HEAP_PROPERTIES upload_heap_properties{};
+            upload_heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+            upload_heap_properties.CreationNodeMask = 1;
+            upload_heap_properties.VisibleNodeMask = 1;
 
-            auto t2 = create_buffer(device, uploadHeapProperties, uploadBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+            const auto upload_buffer_desc = get_buffer_descriptor(uploadBufferSize);
+
+            auto t2 =
+                create_buffer(device, upload_heap_properties, upload_buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ);
 
             return {std::move(t1), std::move(t2)};
         }
@@ -412,23 +433,9 @@ namespace gameoverlay::dxgi
         heap_properties.CreationNodeMask = 1;
         heap_properties.VisibleNodeMask = 1;
 
-        /*
-        D3D12_RESOURCE_DESC index_buffer_desc{};
-        index_buffer_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        index_buffer_desc.Alignment = 0;
-        index_buffer_desc.Width = sizeof(indices);
-        index_buffer_desc.Height = 1;
-        index_buffer_desc.DepthOrArraySize = 1;
-        index_buffer_desc.MipLevels = 1;
-        index_buffer_desc.Format = DXGI_FORMAT_UNKNOWN;
-        index_buffer_desc.SampleDesc.Count = 1;
-        index_buffer_desc.SampleDesc.Quality = 0;
-        index_buffer_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        index_buffer_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        */
-        D3D12_RESOURCE_DESC indexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(indices));
+        const auto index_buffer_desc = get_buffer_descriptor(sizeof(indices));
 
-        index_buffer_ = create_buffer(*device_, heap_properties, indexBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+        index_buffer_ = create_buffer(*device_, heap_properties, index_buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ);
 
         void* index_data_begin{};
         D3D12_RANGE read_range{0, 0};
@@ -436,23 +443,9 @@ namespace gameoverlay::dxgi
         std::memcpy(index_data_begin, indices, sizeof(indices));
         index_buffer_->Unmap(0, nullptr);
 
-        D3D12_RESOURCE_DESC vertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(vertex) * 4);
-
-        /*
-        D3D12_RESOURCE_DESC vertex_buffer_desc{};
-        vertex_buffer_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        vertex_buffer_desc.Alignment = 0;
-        vertex_buffer_desc.Width = sizeof(vertex) * 4;
-        vertex_buffer_desc.Height = 1;
-        vertex_buffer_desc.DepthOrArraySize = 1;
-        vertex_buffer_desc.MipLevels = 1;
-        vertex_buffer_desc.Format = DXGI_FORMAT_UNKNOWN;
-        vertex_buffer_desc.SampleDesc.Count = 1;
-        vertex_buffer_desc.SampleDesc.Quality = 0;
-        vertex_buffer_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        vertex_buffer_desc.Flags = D3D12_RESOURCE_FLAG_NONE;*/
-
-        vertex_buffer_ = create_buffer(*device_, heap_properties, vertexBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+        const auto vertex_buffer_desc = get_buffer_descriptor(sizeof(vertex) * 4);
+        vertex_buffer_ =
+            create_buffer(*device_, heap_properties, vertex_buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ);
     }
 
     void d3d12_canvas::resize_texture(const dimensions new_dimensions)
@@ -496,10 +489,15 @@ namespace gameoverlay::dxgi
             return;
         }
 
-        D3D12_RESOURCE_BARRIER textureTransitionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-            texture_, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barrier.Transition.pResource = texture_;
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
-        command_list_->ResourceBarrier(1, &textureTransitionBarrier);
+        command_list_->ResourceBarrier(1, &barrier);
 
         D3D12_SUBRESOURCE_DATA textureData = {};
         textureData.pData = image.data();
@@ -508,10 +506,10 @@ namespace gameoverlay::dxgi
 
         UpdateSubresources(command_list_, texture_, this->upload_buffer_, 0, 0, 1, &textureData);
 
-        D3D12_RESOURCE_BARRIER textureTransitionBarrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
-            texture_, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
-        command_list_->ResourceBarrier(1, &textureTransitionBarrier2);
+        command_list_->ResourceBarrier(1, &barrier);
     }
 
     void d3d12_canvas::draw() const
@@ -600,30 +598,25 @@ namespace gameoverlay::dxgi
             command_queue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
         });
 
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(rtv_heap_->GetCPUDescriptorHandleForHeapStart());
+        const auto render_target_view_handle = rtv_heap_->GetCPUDescriptorHandleForHeapStart();
 
         const auto frame_index = swap_chain_->GetCurrentBackBufferIndex();
 
-        // for (UINT i = 0; i < 2; ++i)
+        const auto x = swap_chain_->GetBuffer(frame_index, IID_PPV_ARGS(&render_target));
+        if (FAILED(x) || !render_target)
         {
-            const auto x = swap_chain_->GetBuffer(frame_index, IID_PPV_ARGS(&render_target));
-            if (FAILED(x) || !render_target)
-            {
-                puts("FAIL");
-                return;
-            }
-
-            D3D12_RESOURCE_DESC desc = render_target->GetDesc();
-
-            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-            rtvDesc.Format = desc.Format; // Match back buffer format!
-            rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-            rtvDesc.Texture2D.MipSlice = 0;
-
-            device_->CreateRenderTargetView(render_target, &rtvDesc, rtvHandle);
-
-            rtvHandle.Offset(1, rtv_descriptor_size_);
+            puts("FAIL");
+            return;
         }
+
+        D3D12_RESOURCE_DESC desc = render_target->GetDesc();
+
+        D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+        rtvDesc.Format = desc.Format; // Match back buffer format!
+        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+        rtvDesc.Texture2D.MipSlice = 0;
+
+        device_->CreateRenderTargetView(render_target, &rtvDesc, render_target_view_handle);
 
         command_list_->SetGraphicsRootSignature(root_signature_);
 
@@ -641,8 +634,6 @@ namespace gameoverlay::dxgi
         }
 
         D3D12_RESOURCE_BARRIER barrier{};
-        memset(&barrier, 0, sizeof(barrier));
-
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
         barrier.Transition.pResource = render_target;
@@ -650,13 +641,9 @@ namespace gameoverlay::dxgi
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
-        /* D3D12_RESOURCE_BARRIER rtv1Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-             render_targets_[frame_index_], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);*/
         command_list_->ResourceBarrier(1, &barrier);
 
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle2(rtv_heap_->GetCPUDescriptorHandleForHeapStart(), 0,
-                                                 rtv_descriptor_size_);
-        command_list_->OMSetRenderTargets(1, &rtvHandle2, FALSE, nullptr);
+        command_list_->OMSetRenderTargets(1, &render_target_view_handle, FALSE, nullptr);
 
         command_list_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -676,9 +663,8 @@ namespace gameoverlay::dxgi
 
         command_list_->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
-        // Indicate that the back buffer will now be used to present.
-        D3D12_RESOURCE_BARRIER rtv2Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-            render_target, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-        command_list_->ResourceBarrier(1, &rtv2Barrier);
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+        command_list_->ResourceBarrier(1, &barrier);
     }
 }
