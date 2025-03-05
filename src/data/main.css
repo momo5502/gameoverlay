@@ -4,13 +4,33 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.notification {
+.notifications {
     position: fixed;
     top: 0;
     right: 0;
-    margin: 16px;
-    padding: 16px;
+}
+
+
+.notification {
+    margin: 12px;
+    padding: 12px 16px;
     border-radius: 12px;
-    background: rgb(208, 255, 0);
+    background: rgb(177, 177, 177);
     box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+}
+
+.notification.info {
+    background:#00B0F8;
+}
+
+.notification.success {
+    background: #95D500;
+}
+
+.notification.warn {
+    background: #F8B000;
+}
+
+.notification.error {
+    background: #FF3131;
 }
