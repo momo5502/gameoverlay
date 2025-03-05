@@ -3,6 +3,7 @@
 #include "dxgi_win.hpp"
 #include "dxgi_canvas.hpp"
 #include <span>
+#include <vector>
 
 namespace gameoverlay::dxgi
 {

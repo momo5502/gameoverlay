@@ -79,21 +79,12 @@ namespace gameoverlay::dxgi
 
         CComPtr<ID3D12RootSignature> create_root_signature(ID3D12Device& device)
         {
-            D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-            featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-            const auto hr = device.CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData));
-            if (FAILED(hr))
-            {
-                featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-            }
-
-            D3D12_DESCRIPTOR_RANGE1 range{};
+            D3D12_DESCRIPTOR_RANGE range{};
             range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
             range.NumDescriptors = 1;
-            range.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC;
             range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-            D3D12_ROOT_PARAMETER1 root_parameter{};
+            D3D12_ROOT_PARAMETER root_parameter{};
             root_parameter.DescriptorTable.NumDescriptorRanges = 1;
             root_parameter.DescriptorTable.pDescriptorRanges = &range;
             root_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -114,18 +105,17 @@ namespace gameoverlay::dxgi
             sampler_desc.RegisterSpace = 0;
             sampler_desc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-            D3D12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_desc{};
-            root_signature_desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
-            root_signature_desc.Desc_1_1.NumParameters = 1;
-            root_signature_desc.Desc_1_1.pParameters = &root_parameter;
-            root_signature_desc.Desc_1_1.NumStaticSamplers = 1;
-            root_signature_desc.Desc_1_1.pStaticSamplers = &sampler_desc;
-            root_signature_desc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+            D3D12_ROOT_SIGNATURE_DESC root_signature_desc{};
+            root_signature_desc.NumParameters = 1;
+            root_signature_desc.pParameters = &root_parameter;
+            root_signature_desc.NumStaticSamplers = 1;
+            root_signature_desc.pStaticSamplers = &sampler_desc;
+            root_signature_desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
             CComPtr<ID3DBlob> signature_blob{};
             CComPtr<ID3DBlob> error_blob{};
-            auto res = D3DX12SerializeVersionedRootSignature(&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1,
-                                                             &signature_blob, &error_blob); // TODO
+            auto res = D3D12SerializeRootSignature(&root_signature_desc, D3D_ROOT_SIGNATURE_VERSION_1_0,
+                                                   &signature_blob, &error_blob);
 
             if (FAILED(res))
             {
@@ -251,6 +241,26 @@ namespace gameoverlay::dxgi
             return buffer_desc;
         }
 
+        uint64_t get_required_intermediate_size(ID3D12Resource& resource, const uint32_t first_subresource = 0,
+                                                const uint32_t num_subresources = 1)
+        {
+            const auto desc = resource.GetDesc();
+
+            CComPtr<ID3D12Device> device{};
+            const auto res = resource.GetDevice(IID_PPV_ARGS(&device));
+
+            if (FAILED(res) || !device)
+            {
+                throw std::runtime_error("Failed to get d3d12 device");
+            }
+
+            uint64_t required_size{};
+            device->GetCopyableFootprints(&desc, first_subresource, num_subresources, 0, nullptr, nullptr, nullptr,
+                                          &required_size);
+
+            return required_size;
+        }
+
         std::pair<CComPtr<ID3D12Resource>, CComPtr<ID3D12Resource>> create_texture_2d(ID3D12Device& device,
                                                                                       const dimensions dim,
                                                                                       const DXGI_FORMAT format)
@@ -273,14 +283,13 @@ namespace gameoverlay::dxgi
 
             auto t1 = create_buffer(device, heap_properties, resource_desc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-            const UINT64 uploadBufferSize = GetRequiredIntermediateSize(t1, 0, 1); // TODO
+            const auto upload_buffer_size = get_required_intermediate_size(*t1);
+            const auto upload_buffer_desc = get_buffer_descriptor(upload_buffer_size);
 
             D3D12_HEAP_PROPERTIES upload_heap_properties{};
             upload_heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
             upload_heap_properties.CreationNodeMask = 1;
             upload_heap_properties.VisibleNodeMask = 1;
-
-            const auto upload_buffer_desc = get_buffer_descriptor(uploadBufferSize);
 
             auto t2 =
                 create_buffer(device, upload_heap_properties, upload_buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ);
@@ -288,8 +297,10 @@ namespace gameoverlay::dxgi
             return {std::move(t1), std::move(t2)};
         }
 
-        CComPtr<ID3D12DescriptorHeap> create_descriptor_heap(ID3D12Device& device, D3D12_DESCRIPTOR_HEAP_TYPE type,
-                                                             D3D12_DESCRIPTOR_HEAP_FLAGS flags, UINT num_descriptors)
+        CComPtr<ID3D12DescriptorHeap> create_descriptor_heap(ID3D12Device& device,
+                                                             const D3D12_DESCRIPTOR_HEAP_TYPE type,
+                                                             const D3D12_DESCRIPTOR_HEAP_FLAGS flags,
+                                                             const uint32_t num_descriptors)
         {
             D3D12_DESCRIPTOR_HEAP_DESC desc{};
             desc.NumDescriptors = num_descriptors;
@@ -297,7 +308,7 @@ namespace gameoverlay::dxgi
             desc.Flags = flags;
 
             CComPtr<ID3D12DescriptorHeap> descriptor_heap{};
-            auto res = device.CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptor_heap));
+            const auto res = device.CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptor_heap));
 
             if (FAILED(res))
             {
@@ -311,8 +322,8 @@ namespace gameoverlay::dxgi
                                 const dimensions dim)
         {
             vertex* vertex_data_begin{};
-            D3D12_RANGE read_range{0, 0};
-            auto res = vertex_buffer.Map(0, &read_range, reinterpret_cast<void**>(&vertex_data_begin));
+            constexpr D3D12_RANGE read_range{0, 0};
+            const auto res = vertex_buffer.Map(0, &read_range, reinterpret_cast<void**>(&vertex_data_begin));
 
             if (FAILED(res))
             {
@@ -372,14 +383,6 @@ namespace gameoverlay::dxgi
 
             auto* entry = *utils::hook::get_vtable_entry(&*command_queue, &ID3D12CommandQueue::ExecuteCommandLists);
             exhook.create(entry, ExecuteCommandListsStub);
-            /*  CreateThread(
-                  nullptr, 0,
-                  +[](void* ptr) -> DWORD {
-                      MessageBoxA(0, 0, 0, 0);
-                      exhook.create(ptr, ExecuteCommandListsStub);
-                      return 0;
-                  },
-                  entry, 0, 0);*/
             return 0;
         }();
 
@@ -415,8 +418,8 @@ namespace gameoverlay::dxgi
 
     void d3d12_canvas::load_pipeline()
     {
-        auto vs_blob = compile_shader(vertex_shader_src, "vs_5_0", "VS");
-        auto ps_blob = compile_shader(pixel_shader_src, "ps_5_0", "PS");
+        const auto vs_blob = compile_shader(vertex_shader_src, "vs_5_0", "VS");
+        const auto ps_blob = compile_shader(pixel_shader_src, "ps_5_0", "PS");
 
         root_signature_ = create_root_signature(*device_);
         pipeline_state_ = create_pipeline_state(*device_, *root_signature_, *vs_blob, *ps_blob, *swap_chain_);
@@ -438,7 +441,7 @@ namespace gameoverlay::dxgi
         index_buffer_ = create_buffer(*device_, heap_properties, index_buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ);
 
         void* index_data_begin{};
-        D3D12_RANGE read_range{0, 0};
+        constexpr D3D12_RANGE read_range{0, 0};
         index_buffer_->Map(0, &read_range, &index_data_begin);
         std::memcpy(index_data_begin, indices, sizeof(indices));
         index_buffer_->Unmap(0, nullptr);
@@ -472,7 +475,7 @@ namespace gameoverlay::dxgi
         srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels = 1;
 
-        device_->CreateShaderResourceView(texture_, &srv_desc, srv_heap_->GetCPUDescriptorHandleForHeapStart()); // TODO
+        device_->CreateShaderResourceView(texture_, &srv_desc, srv_heap_->GetCPUDescriptorHandleForHeapStart());
 
         translate_vertices(*vertex_buffer_, 0, 0, ~0UL, new_dimensions);
     }
@@ -504,7 +507,7 @@ namespace gameoverlay::dxgi
         textureData.RowPitch = this->get_width() * 4;
         textureData.SlicePitch = textureData.RowPitch * this->get_height();
 
-        UpdateSubresources(command_list_, texture_, this->upload_buffer_, 0, 0, 1, &textureData);
+        UpdateSubresources(command_list_, texture_, this->upload_buffer_, 0, 0, 1, &textureData); // TODO
 
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -560,8 +563,8 @@ namespace gameoverlay::dxgi
         auto completedValue = fence_->GetCompletedValue();
 
         const UINT64 fenceValue = fence_value_;
-        auto hr = command_queue_->Signal(fence_, fenceValue);
-        if (FAILED(hr))
+        const auto res = command_queue_->Signal(fence_, fenceValue);
+        if (FAILED(res))
         {
             return;
         }
@@ -572,18 +575,10 @@ namespace gameoverlay::dxgi
 
         if (completedValue < fenceValue)
         {
-            HANDLE eventHandle = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+            const HANDLE eventHandle = CreateEvent(nullptr, FALSE, FALSE, nullptr);
             fence_->SetEventOnCompletion(fenceValue, eventHandle);
             WaitForSingleObject(eventHandle, INFINITE);
             CloseHandle(eventHandle);
-
-            /*hr = fence_->SetEventOnCompletion(fenceValue, fence_event_);
-            if (FAILED(hr))
-            {
-                return;
-            }
-
-            WaitForSingleObject(fence_event_, INFINITE);*/
         }
     }
 
