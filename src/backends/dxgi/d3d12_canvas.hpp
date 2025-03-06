@@ -41,12 +41,11 @@ namespace gameoverlay::dxgi
         UINT rtv_descriptor_size_{};
         UINT srv_descriptor_size_{};
         CComPtr<ID3D12Fence> fence_{};
-        mutable UINT64 fence_value_{1};
+        mutable UINT64 fence_value_{0};
 
         void resize_texture(dimensions new_dimensions) override;
         void load_pipeline();
         void load_assets();
         void populate_command_list() const;
-        void wait_for_gpu() const;
     };
 }

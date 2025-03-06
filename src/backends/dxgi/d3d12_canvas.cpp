@@ -576,7 +576,14 @@ namespace gameoverlay::dxgi
             }
         }
 
-        this->wait_for_gpu();
+        const auto completed_value = this->fence_->GetCompletedValue();
+
+        if (completed_value < this->fence_value_)
+        {
+            ResetEvent(this->fence_event_);
+            this->fence_->SetEventOnCompletion(this->fence_value_, this->fence_event_);
+            WaitForSingleObject(this->fence_event_, INFINITE);
+        }
 
         this->command_allocator_->Reset();
         this->command_list_->Reset(this->command_allocator_, this->pipeline_state_);
@@ -591,27 +598,13 @@ namespace gameoverlay::dxgi
 
         ID3D12CommandList* command_list = this->command_list_;
         this->command_queue_->ExecuteCommandLists(1, &command_list);
-    }
 
-    void d3d12_canvas::wait_for_gpu() const
-    {
-        const UINT64 target_fence_value = this->fence_value_++;
+        const UINT64 target_fence_value = ++this->fence_value_;
         const auto res = this->command_queue_->Signal(fence_, target_fence_value);
         if (FAILED(res))
         {
-            return;
+            throw std::runtime_error("Failed to signal fence");
         }
-
-        const auto completed_value = this->fence_->GetCompletedValue();
-
-        if (target_fence_value < completed_value)
-        {
-            return;
-        }
-
-        ResetEvent(this->fence_event_);
-        this->fence_->SetEventOnCompletion(target_fence_value, this->fence_event_);
-        WaitForSingleObject(this->fence_event_, INFINITE);
     }
 
     void d3d12_canvas::populate_command_list() const
