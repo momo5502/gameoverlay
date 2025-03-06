@@ -1,69 +1,20 @@
 #include "d3d12_canvas.hpp"
-#include <cassert>
-#include <stdexcept>
-#include <d3dcompiler.h>
-#include <DirectXMath.h>
-#include <set>
 
-#include "dxgi_utils.hpp"
-#include "utils/concurrency.hpp"
-#include "utils/finally.hpp"
-#include "utils/hook.hpp"
+#include "dxgi_canvas_utils.hpp"
+
+#include <utils/finally.hpp>
+#include <utils/concurrency.hpp>
 
 namespace gameoverlay::dxgi
 {
     namespace
     {
-        struct vertex
-        {
-            DirectX::XMFLOAT3 pos;
-            DirectX::XMFLOAT2 tex_coord;
-            COLORREF color;
-        };
-
-        constexpr char vertex_shader_src[] = R"(
-            struct VertexIn {
-                float3 Pos : POSITION;
-                float2 Tex : TEXCOORD;
-                float4 Color : COLOR;
-            };
-
-            struct VertexOut {
-                float4 Pos : SV_POSITION;
-                float2 Tex : TEXCOORD;
-                float4 Color : COLOR;
-            };
-
-            VertexOut VS(VertexIn vin) {
-                VertexOut vout;
-                vout.Pos = float4(vin.Pos, 1.0f);
-                vout.Tex = vin.Tex;
-                vout.Color = vin.Color;
-                return vout;
-            }
-        )";
-
-        constexpr char pixel_shader_src[] = R"(
-            Texture2D SpriteTex : register(t0);
-            SamplerState samLinear : register(s0);
-
-            struct VertexOut {
-                float4 Pos : SV_POSITION;
-                float2 Tex : TEXCOORD;
-                float4 Color : COLOR;
-            };
-
-            float4 PS(VertexOut pin) : SV_Target {
-                return pin.Color * SpriteTex.Sample(samLinear, pin.Tex);
-            }
-        )";
-
-        CComPtr<ID3DBlob> compile_shader(const std::string& src, const std::string& target,
+        CComPtr<ID3DBlob> compile_shader(const std::string_view& src, const std::string& target,
                                          const std::string& entry_point)
         {
             CComPtr<ID3DBlob> shader_blob{};
             CComPtr<ID3DBlob> error_blob{};
-            const auto res = D3DCompile(src.c_str(), src.size(), nullptr, nullptr, nullptr, entry_point.c_str(),
+            const auto res = D3DCompile(src.data(), src.size(), nullptr, nullptr, nullptr, entry_point.c_str(),
                                         target.c_str(), 0, 0, &shader_blob, &error_blob);
 
             if (FAILED(res))
@@ -332,20 +283,7 @@ namespace gameoverlay::dxgi
                 throw std::runtime_error("Failed to map vertex buffer");
             }
 
-            const auto f_x = static_cast<float>(x);
-            const auto f_y = static_cast<float>(y);
-            const auto f_width = static_cast<float>(dim.width);
-            const auto f_height = static_cast<float>(dim.height);
-
-            const auto w1 = 2.0f * f_x / f_width - 1.0f;
-            const auto w2 = 2.0f * (f_x + f_width) / f_width - 1.0f;
-            const auto h1 = 1.0f - 2.0f * f_y / f_height;
-            const auto h2 = 1.0f - 2.0f * (f_y + f_height) / f_height;
-
-            vertex_data_begin[0] = {DirectX::XMFLOAT3(w1, h1, 0.5f), DirectX::XMFLOAT2(0.0f, 0.0f), color};
-            vertex_data_begin[1] = {DirectX::XMFLOAT3(w2, h1, 0.5f), DirectX::XMFLOAT2(1.0f, 0.0f), color};
-            vertex_data_begin[2] = {DirectX::XMFLOAT3(w2, h2, 0.5f), DirectX::XMFLOAT2(1.0f, 1.0f), color};
-            vertex_data_begin[3] = {DirectX::XMFLOAT3(w1, h2, 0.5f), DirectX::XMFLOAT2(0.0f, 1.0f), color};
+            translate_vertices(vertex_data_begin, x, y, color, dim);
 
             vertex_buffer.Unmap(0, nullptr);
         }
