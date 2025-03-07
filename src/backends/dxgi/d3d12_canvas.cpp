@@ -25,9 +25,6 @@ namespace gameoverlay::dxgi
             return shader_blob;
         }
 
-        using queue_map = std::set<CComPtr<ID3D12CommandQueue>>;
-        utils::concurrency::container<queue_map> g_command_queue{};
-
         CComPtr<ID3D12RootSignature> create_root_signature(ID3D12Device& device)
         {
             D3D12_DESCRIPTOR_RANGE range{};

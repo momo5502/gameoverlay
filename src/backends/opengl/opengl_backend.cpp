@@ -66,8 +66,8 @@ namespace gameoverlay::opengl
 
         auto& hooks = get_hooks();
 
-        hooks.swap_buffers.create(::SwapBuffers, swap_buffers_stub);
-        hooks.delete_dc.create(::DeleteDC, delete_dc_stub);
+        hooks.swap_buffers.create(&::SwapBuffers, &swap_buffers_stub);
+        hooks.delete_dc.create(&::DeleteDC, &delete_dc_stub);
     }
 
     std::unique_ptr<backend> create_backend(backend::owned_handler h)
