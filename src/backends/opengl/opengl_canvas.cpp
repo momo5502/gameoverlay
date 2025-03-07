@@ -86,11 +86,10 @@ namespace gameoverlay::opengl
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
             const auto bytes = width * height * 4;
-            const std::unique_ptr<uint8_t[]> buffer(new uint8_t[bytes]);
-            memset(buffer.get(), 0xFF, bytes);
+            const std::vector<uint8_t> buffer(bytes, 0xFF);
 
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0,
-                         GL_RGBA, GL_UNSIGNED_BYTE, buffer.get());
+                         GL_RGBA, GL_UNSIGNED_BYTE, buffer.data());
 
             return new_texture;
         }
