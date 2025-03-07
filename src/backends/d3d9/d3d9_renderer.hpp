@@ -15,7 +15,7 @@ namespace gameoverlay::d3d9
         void reset();
 
       private:
-        IDirect3DDevice9* device_{};
+        CComPtr<IDirect3DDevice9> device_{};
         std::unique_ptr<d3d9_canvas> canvas_{};
     };
 }

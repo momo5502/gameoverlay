@@ -16,7 +16,7 @@ namespace gameoverlay::d3d9
         void draw() const;
 
       private:
-        IDirect3DDevice9* device_{};
+        CComPtr<IDirect3DDevice9> device_{};
         CComPtr<ID3DXSprite> sprite_{};
         CComPtr<IDirect3DTexture9> texture_{};
     };

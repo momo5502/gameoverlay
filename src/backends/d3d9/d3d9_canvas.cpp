@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "utils/finally.hpp"
+#include "utils/string.hpp"
 
 namespace gameoverlay::d3d9
 {
@@ -23,8 +24,13 @@ namespace gameoverlay::d3d9
         }
     }
 
-    void d3d9_canvas::paint(std::span<const uint8_t> image)
+    void d3d9_canvas::paint(const std::span<const uint8_t> image)
     {
+        if (image.size() != this->get_buffer_size())
+        {
+            return;
+        }
+
         D3DSURFACE_DESC desc{};
         this->texture_->GetLevelDesc(0, &desc);
 
@@ -43,19 +49,32 @@ namespace gameoverlay::d3d9
             this->texture_->UnlockRect(0); //
         });
 
-        const auto bytes_per_pixel = static_cast<uint32_t>(locked_rect.Pitch) / this->get_width();
+        const auto width = this->get_width();
+        const auto height = this->get_height();
 
-        if (bytes_per_pixel != 4)
+        for (size_t row = 0; row < height; ++row)
         {
-            assert(false && "Bad bytes_per_pixel value!");
-            return;
-        }
+            auto* dest_row_start = static_cast<uint8_t*>(locked_rect.pBits) + (row * locked_rect.Pitch);
+            auto* src_row_start = image.data() + (row * width * 4);
 
-        memcpy(locked_rect.pBits, image.data(), std::min(image.size(), this->get_buffer_size()));
+            for (size_t i = 0; i < width; ++i)
+            {
+                auto* dest_pixel = dest_row_start + (i * 4);
+                auto* src_pixel = src_row_start + (i * 4);
+
+                dest_pixel[0] = src_pixel[2];
+                dest_pixel[1] = src_pixel[1];
+                dest_pixel[2] = src_pixel[0];
+                dest_pixel[3] = src_pixel[3];
+            }
+        }
     }
 
     void d3d9_canvas::draw() const
     {
+        D3DVIEWPORT9 vp{};
+        this->device_->GetViewport(&vp);
+
         this->device_->BeginScene();
 
         const D3DXVECTOR3 position(0.0, 0.0, 0.0f);

@@ -10,7 +10,6 @@ namespace gameoverlay::d3d9
         struct hooks
         {
             utils::hook::detour device_reset{};
-            utils::hook::detour device_release{};
             utils::hook::detour device_present{};
             utils::hook::detour swap_chain_present{};
         };
@@ -39,37 +38,22 @@ namespace gameoverlay::d3d9
                 *device);
         }
 
-        ULONG WINAPI release_device(IDirect3DDevice9* device)
+        void reset_device(IDirect3DDevice9* device)
         {
-            return get_hooks().device_release.invoke_stdcall<ULONG>(device);
-        }
-
-        ULONG get_device_ref_count(IDirect3DDevice9* device)
-        {
-            if (!device)
+            if (!device || !g_backend)
             {
-                return 0;
+                return;
             }
 
-            device->AddRef();
-            return release_device(device);
+            g_backend->access_renderer(device, [](d3d9_renderer& r) {
+                r.reset(); //
+            });
         }
 
         HRESULT WINAPI device_reset_stub(IDirect3DDevice9* device, void* presentation_parameters)
         {
+            reset_device(device);
             return get_hooks().device_reset.invoke_stdcall<HRESULT>(device, presentation_parameters);
-        }
-
-        ULONG WINAPI device_release_stub(IDirect3DDevice9* device)
-        {
-            if (g_backend)
-            {
-                g_backend->erase(device, [&] {
-                    return get_device_ref_count(device) <= 1; //
-                });
-            }
-
-            return release_device(device);
         }
 
         HRESULT WINAPI device_present_stub(IDirect3DDevice9* device, const RECT* source_rect, const RECT* dest_rect,
@@ -129,9 +113,6 @@ namespace gameoverlay::d3d9
         device->GetSwapChain(0, &swap_chain);
 
         auto& hooks = get_hooks();
-
-        auto* device_release = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Release);
-        hooks.device_release.create(device_release, device_release_stub);
 
         auto* device_present = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Present);
         hooks.device_present.create(device_present, device_present_stub);
