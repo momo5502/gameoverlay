@@ -17,16 +17,19 @@ namespace gameoverlay::opengl
     {
         gl_object get_legacy_shader_program()
         {
-            return create_program("void main(void)"
-                                  "{"
-                                  "	gl_TexCoord[0] = gl_MultiTexCoord0;"
-                                  "	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;"
-                                  "}",
-                                  "uniform sampler2D tex_sampler;"
-                                  "void main(void)"
-                                  "{"
-                                  "	gl_FragColor = texture2D(tex_sampler,gl_TexCoord[0].st);"
-                                  "}");
+            return create_program(GLSL(
+                                      120, //
+                                      void main() {
+                                          gl_TexCoord[0] = gl_MultiTexCoord0;
+                                          gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+                                      }),
+                                  GLSL(
+                                      120, //
+                                      uniform sampler2D tex_sampler;
+
+                                      void main() {
+                                          gl_FragColor = texture2D(tex_sampler, gl_TexCoord[0].st); //
+                                      }));
         }
 
         void delete_texture(const GLuint texture)
