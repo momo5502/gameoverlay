@@ -15,7 +15,11 @@ namespace gameoverlay::opengl
         void draw() const;
 
       private:
+        bool is_core_{};
         gl_object texture_{};
         gl_object program_{};
+        gl_object index_buffer_{};
+        gl_object vertex_buffer_{};
+        gl_object vertex_array_object_{};
     };
 }
