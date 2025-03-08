@@ -348,6 +348,13 @@ namespace gameoverlay::dxgi
 
             command_list.ResourceBarrier(1, &barrier);
         }
+
+        bool is_srgb(IDXGISwapChain3& swap_chain)
+        {
+            const auto render_target = get_render_target(swap_chain);
+            const auto desc = render_target->GetDesc();
+            return is_srgb_format(desc.Format);
+        }
     }
 
     d3d12_canvas::d3d12_canvas(d3d12_command_queue_store& store, IDXGISwapChain3& swap_chain)
@@ -444,13 +451,17 @@ namespace gameoverlay::dxgi
         this->scissor_rect_.right = static_cast<LONG>(new_dimensions.width);
         this->scissor_rect_.bottom = static_cast<LONG>(new_dimensions.height);
 
-        auto [tex, upload] = create_texture_2d(*this->device_, new_dimensions, DXGI_FORMAT_R8G8B8A8_UNORM);
+        const auto format = is_srgb(*this->swap_chain_) //
+                                ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+                                : DXGI_FORMAT_R8G8B8A8_UNORM;
+
+        auto [tex, upload] = create_texture_2d(*this->device_, new_dimensions, format);
         this->texture_ = tex;
         this->upload_buffer_ = upload;
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
         srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        srv_desc.Format = format;
         srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         srv_desc.Texture2D.MipLevels = 1;
 
