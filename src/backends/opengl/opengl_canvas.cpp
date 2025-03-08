@@ -205,7 +205,7 @@ namespace gameoverlay::opengl
 
         glBindTexture(GL_TEXTURE_2D, this->texture_);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, static_cast<GLsizei>(this->get_width()),
-                        static_cast<GLsizei>(this->get_height()), GL_RGBA, GL_UNSIGNED_BYTE, image.data());
+                        static_cast<GLsizei>(this->get_height()), GL_BGRA, GL_UNSIGNED_BYTE, image.data());
     }
 
     void opengl_canvas::draw() const

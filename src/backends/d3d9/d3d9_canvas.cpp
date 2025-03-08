@@ -57,16 +57,7 @@ namespace gameoverlay::d3d9
             auto* dest_row_start = static_cast<uint8_t*>(locked_rect.pBits) + (row * locked_rect.Pitch);
             auto* src_row_start = image.data() + (row * width * 4);
 
-            for (size_t i = 0; i < width; ++i)
-            {
-                auto* dest_pixel = dest_row_start + (i * 4);
-                auto* src_pixel = src_row_start + (i * 4);
-
-                dest_pixel[0] = src_pixel[2];
-                dest_pixel[1] = src_pixel[1];
-                dest_pixel[2] = src_pixel[0];
-                dest_pixel[3] = src_pixel[3];
-            }
+            memcpy(dest_row_start, src_row_start, width * 4);
         }
     }
 

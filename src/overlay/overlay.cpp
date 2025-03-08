@@ -97,16 +97,7 @@ namespace gameoverlay
                         return;
                     }
 
-                    for (size_t i = 0; i < dim.get_area(); ++i)
-                    {
-                        auto* dest_pixel = image_buffer.data() + (i * 4);
-                        auto* src_pixel = data.data() + (i * 4);
-
-                        dest_pixel[0] = src_pixel[2];
-                        dest_pixel[1] = src_pixel[1];
-                        dest_pixel[2] = src_pixel[0];
-                        dest_pixel[3] = src_pixel[3];
-                    }
+                    memcpy(image_buffer.data(), data.data(), data.size());
                 });
             }
 

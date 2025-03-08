@@ -690,7 +690,7 @@ namespace gameoverlay::dxgi
             }
 
             const auto srgb = detail::is_srgb<traits>(*this->swap_chain_);
-            const auto format = srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
+            const auto format = srgb ? DXGI_FORMAT_B8G8R8A8_UNORM_SRGB : DXGI_FORMAT_B8G8R8A8_UNORM;
 
             this->render_target_view_ = detail::create_render_target_view(*this->device_, *this->swap_chain_);
 

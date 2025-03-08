@@ -452,8 +452,8 @@ namespace gameoverlay::dxgi
         this->scissor_rect_.bottom = static_cast<LONG>(new_dimensions.height);
 
         const auto format = is_srgb(*this->swap_chain_) //
-                                ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
-                                : DXGI_FORMAT_R8G8B8A8_UNORM;
+                                ? DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
+                                : DXGI_FORMAT_B8G8R8A8_UNORM;
 
         auto [tex, upload] = create_texture_2d(*this->device_, new_dimensions, format);
         this->texture_ = tex;
