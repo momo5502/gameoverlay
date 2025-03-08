@@ -51,10 +51,6 @@ namespace
             return shader;
         }
 
-#ifndef NDEBUG
-        MessageBoxA(nullptr, compilation_error->c_str(), nullptr, 0);
-#endif
-
         throw std::runtime_error(*compilation_error);
     }
 }
