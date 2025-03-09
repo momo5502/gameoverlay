@@ -4,6 +4,7 @@
 
 #include <backend.hpp>
 
+#include <backend_d3d8.hpp>
 #include <backend_d3d9.hpp>
 #include <backend_dxgi.hpp>
 #include <backend_opengl.hpp>
@@ -103,6 +104,9 @@ namespace gameoverlay
 
             overlay()
             {
+#if HAS_D3D8
+                backends.emplace_back(d3d8::create_backend(this->make_handler()));
+#endif
                 backends.emplace_back(d3d9::create_backend(this->make_handler()));
                 backends.emplace_back(dxgi::create_backend(this->make_handler()));
                 backends.emplace_back(opengl::create_backend(this->make_handler()));
