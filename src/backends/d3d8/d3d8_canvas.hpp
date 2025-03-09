@@ -18,5 +18,6 @@ namespace gameoverlay::d3d8
       private:
         IDirect3DDevice8* device_{};
         CComPtr<IDirect3DTexture8> texture_{};
+        DWORD state_block_{};
     };
 }

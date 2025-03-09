@@ -17,7 +17,7 @@ namespace gameoverlay::d3d9
 
       private:
         CComPtr<IDirect3DDevice9> device_{};
-        CComPtr<ID3DXSprite> sprite_{};
         CComPtr<IDirect3DTexture9> texture_{};
+        CComPtr<IDirect3DStateBlock9> state_block_{};
     };
 }
