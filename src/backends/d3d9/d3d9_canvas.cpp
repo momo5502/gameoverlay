@@ -3,8 +3,7 @@
 #include <cassert>
 #include <stdexcept>
 
-#include "utils/finally.hpp"
-#include "utils/string.hpp"
+#include <utils/finally.hpp>
 
 namespace gameoverlay::d3d9
 {
@@ -63,9 +62,6 @@ namespace gameoverlay::d3d9
 
     void d3d9_canvas::draw() const
     {
-        D3DVIEWPORT9 vp{};
-        this->device_->GetViewport(&vp);
-
         this->device_->BeginScene();
 
         const D3DXVECTOR3 position(0.0, 0.0, 0.0f);
