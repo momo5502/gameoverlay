@@ -3,6 +3,7 @@
 #include <backend_d3d9.hpp>
 
 #include <utils/hook.hpp>
+#include <utils/string.hpp>
 #include <utils/dummy_window.hpp>
 
 namespace gameoverlay::d3d9
@@ -93,6 +94,7 @@ namespace gameoverlay::d3d9
         const CComPtr direct3d = Direct3DCreate9(D3D_SDK_VERSION);
         if (!direct3d)
         {
+            OutputDebugStringA("No Direct3D9\n");
             return;
         }
 
@@ -111,10 +113,11 @@ namespace gameoverlay::d3d9
         pres_params.BackBufferCount = 1;
 
         CComPtr<IDirect3DDevice9> device{};
-        direct3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window.get(), D3DCREATE_SOFTWARE_VERTEXPROCESSING,
-                               &pres_params, &device);
+        const auto res = direct3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window.get(),
+                                                D3DCREATE_SOFTWARE_VERTEXPROCESSING, &pres_params, &device);
         if (!device)
         {
+            OutputDebugStringA(utils::string::va("No D3D8 device: %X\n", res));
             return;
         }
 
