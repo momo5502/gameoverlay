@@ -17,7 +17,6 @@ namespace gameoverlay::d3d8
 
       private:
         IDirect3DDevice8* device_{};
-        CComPtr<ID3DXSprite> sprite_{};
         CComPtr<IDirect3DTexture8> texture_{};
     };
 }

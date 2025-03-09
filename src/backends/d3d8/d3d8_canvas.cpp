@@ -11,11 +11,6 @@ namespace gameoverlay::d3d8
         : fixed_canvas(width, height),
           device_(device)
     {
-        if (FAILED(D3DXCreateSprite(this->device_, &this->sprite_)))
-        {
-            throw std::runtime_error("Failed to create sprite");
-        }
-
         if (FAILED(this->device_->CreateTexture(width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT,
                                                 &this->texture_)))
         {
@@ -43,24 +38,49 @@ namespace gameoverlay::d3d8
             this->texture_->UnlockRect(0); //
         });
 
-        const auto bytes_per_pixel = static_cast<uint32_t>(locked_rect.Pitch) / this->get_width();
+        const auto width = this->get_width();
+        const auto height = this->get_height();
 
-        if (bytes_per_pixel != 4)
+        for (size_t row = 0; row < height; ++row)
         {
-            assert(false && "Bad bytes_per_pixel value!");
-            return;
-        }
+            auto* dest_row_start = static_cast<uint8_t*>(locked_rect.pBits) + (row * locked_rect.Pitch);
+            auto* src_row_start = image.data() + (row * width * 4);
 
-        memcpy(locked_rect.pBits, image.data(), std::min(image.size(), this->get_buffer_size()));
+            memcpy(dest_row_start, src_row_start, width * 4);
+        }
     }
 
     void d3d8_canvas::draw() const
     {
         this->device_->BeginScene();
 
-        this->sprite_->Begin();
-        this->sprite_->Draw(this->texture_, nullptr, nullptr, nullptr, 0.0f, nullptr, 0xFFFFFFFF);
-        this->sprite_->End();
+        this->device_->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        this->device_->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+        this->device_->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+
+        // Set up the texture
+        this->device_->SetTexture(0, this->texture_);
+        this->device_->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+        this->device_->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
+        this->device_->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
+        this->device_->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+        this->device_->SetTextureStageState(0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE);
+        this->device_->SetTextureStageState(0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE);
+
+        struct Vertex
+        {
+            float x, y, z, rhw;
+            float tu, tv;
+        };
+
+        Vertex vertices[4] = {
+            {0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f},
+            {static_cast<float>(this->get_width()), 0.0f, 0.0f, 1.0f, 1.0f, 0.0f},
+            {0.0f, static_cast<float>(this->get_height()), 0.0f, 1.0f, 0.0f, 1.0f},
+            {static_cast<float>(this->get_width()), static_cast<float>(this->get_height()), 0.0f, 1.0f, 1.0f, 1.0f}};
+
+        this->device_->SetVertexShader(D3DFVF_XYZRHW | D3DFVF_TEX1);
+        this->device_->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(Vertex));
 
         this->device_->EndScene();
     }

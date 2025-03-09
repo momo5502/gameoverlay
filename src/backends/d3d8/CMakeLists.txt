@@ -17,7 +17,7 @@ target_link_libraries(backend-d3d8 PUBLIC
 )
 
 target_link_libraries(backend-d3d8 PRIVATE
-  dx8sdk
+  dxsdk
 )
 
 target_include_directories(backend-d3d8 PUBLIC
