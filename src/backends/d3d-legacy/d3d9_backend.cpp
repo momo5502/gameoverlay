@@ -1,7 +1,9 @@
 #include "d3d9_backend.hpp"
 
 #include <backend_d3d9.hpp>
+
 #include <utils/hook.hpp>
+#include <utils/dummy_window.hpp>
 
 namespace gameoverlay::d3d9
 {
@@ -94,15 +96,19 @@ namespace gameoverlay::d3d9
             return;
         }
 
+        utils::dummy_window window{};
+
         D3DPRESENT_PARAMETERS pres_params{};
         ZeroMemory(&pres_params, sizeof(pres_params));
         pres_params.Windowed = TRUE;
-        pres_params.SwapEffect = D3DSWAPEFFECT_DISCARD;
-        pres_params.BackBufferFormat = D3DFMT_UNKNOWN;
+        pres_params.BackBufferWidth = 640;
+        pres_params.BackBufferHeight = 480;
+        pres_params.SwapEffect = D3DSWAPEFFECT_FLIP;
+        pres_params.BackBufferFormat = D3DFMT_A8R8G8B8;
         pres_params.BackBufferCount = 1;
 
         CComPtr<IDirect3DDevice9> device{};
-        direct3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetDesktopWindow(), D3DCREATE_MIXED_VERTEXPROCESSING,
+        direct3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window.get(), D3DCREATE_SOFTWARE_VERTEXPROCESSING,
                                &pres_params, &device);
         if (!device)
         {

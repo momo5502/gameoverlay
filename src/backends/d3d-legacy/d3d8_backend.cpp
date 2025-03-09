@@ -1,9 +1,11 @@
 #include "d3d8_backend.hpp"
 
 #include <backend_d3d8.hpp>
-#include <utils/hook.hpp>
 
-#define HOOK_SWAP_CHAIN_PRESENT
+#include <utils/hook.hpp>
+#include <utils/dummy_window.hpp>
+
+// #define HOOK_SWAP_CHAIN_PRESENT
 
 namespace gameoverlay::d3d8
 {
@@ -100,17 +102,22 @@ namespace gameoverlay::d3d8
             return;
         }
 
+        D3DCAPS8 aps;
+        direct3d->GetDeviceCaps(0, D3DDEVTYPE_HAL, &aps);
+
+        utils::dummy_window window{};
+
         D3DPRESENT_PARAMETERS pres_params{};
         ZeroMemory(&pres_params, sizeof(pres_params));
         pres_params.Windowed = TRUE;
-        pres_params.BackBufferWidth = 800;
-        pres_params.BackBufferHeight = 600;
+        pres_params.BackBufferWidth = 640;
+        pres_params.BackBufferHeight = 480;
         pres_params.SwapEffect = D3DSWAPEFFECT_FLIP;
         pres_params.BackBufferFormat = D3DFMT_A8R8G8B8;
         pres_params.BackBufferCount = 1;
 
         CComPtr<IDirect3DDevice8> device{};
-        direct3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetDesktopWindow(), D3DCREATE_MIXED_VERTEXPROCESSING,
+        direct3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window.get(), D3DCREATE_SOFTWARE_VERTEXPROCESSING,
                                &pres_params, &device);
         if (!device)
         {

@@ -36,7 +36,7 @@ namespace utils
         {
             const auto hwnd =
                 CreateWindowExA(WS_EX_TOOLWINDOW, class_name.c_str(), "", WS_OVERLAPPED, CW_USEDEFAULT, CW_USEDEFAULT,
-                                CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, GetModuleHandleA(nullptr), nullptr);
+                                640, 480, nullptr, nullptr, GetModuleHandleA(nullptr), nullptr);
 
             if (hwnd)
             {
