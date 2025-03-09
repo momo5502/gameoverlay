@@ -48,11 +48,13 @@ namespace gameoverlay
     class typed_renderer : public renderer
     {
       public:
+        static constexpr auto type = Type;
+
         using renderer::renderer;
 
         backend_type get_backend_type() const override
         {
-            return Type;
+            return type;
         }
     };
 

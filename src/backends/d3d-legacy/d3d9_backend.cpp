@@ -117,7 +117,7 @@ namespace gameoverlay::d3d9
                                                 D3DCREATE_SOFTWARE_VERTEXPROCESSING, &pres_params, &device);
         if (!device)
         {
-            OutputDebugStringA(utils::string::va("No D3D8 device: %X\n", res));
+            OutputDebugStringA(utils::string::va("No D3D9 device: %X\n", res));
             return;
         }
 
