@@ -94,12 +94,14 @@ namespace gameoverlay::d3d_legacy
                 float tu, tv;
             };
 
+            const auto w = static_cast<float>(this->get_width() - 1);
+            const auto h = static_cast<float>(this->get_height() - 1);
+
             const vertex vertices[4] = {
                 {0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f},
-                {static_cast<float>(this->get_width() - 1), 0.0f, 0.0f, 1.0f, 1.0f, 0.0f},
-                {0.0f, static_cast<float>(this->get_height() - 1), 0.0f, 1.0f, 0.0f, 1.0f},
-                {static_cast<float>(this->get_width() - 1), static_cast<float>(this->get_height() - 1), 0.0f, 1.0f,
-                 1.0f, 1.0f},
+                {w, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f},
+                {0.0f, h, 0.0f, 1.0f, 0.0f, 1.0f},
+                {w, h, 0.0f, 1.0f, 1.0f, 1.0f},
             };
 
             traits::set_fvf_func(*this->device_, D3DFVF_XYZRHW | D3DFVF_TEX1);

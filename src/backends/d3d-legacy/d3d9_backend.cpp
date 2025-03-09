@@ -98,13 +98,16 @@ namespace gameoverlay::d3d9
 
         utils::dummy_window window{};
 
+        D3DDISPLAYMODE display_mode{};
+        direct3d->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &display_mode);
+
         D3DPRESENT_PARAMETERS pres_params{};
         ZeroMemory(&pres_params, sizeof(pres_params));
         pres_params.Windowed = TRUE;
         pres_params.BackBufferWidth = 640;
         pres_params.BackBufferHeight = 480;
         pres_params.SwapEffect = D3DSWAPEFFECT_FLIP;
-        pres_params.BackBufferFormat = D3DFMT_A8R8G8B8;
+        pres_params.BackBufferFormat = display_mode.Format;
         pres_params.BackBufferCount = 1;
 
         CComPtr<IDirect3DDevice9> device{};
