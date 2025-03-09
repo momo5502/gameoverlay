@@ -102,8 +102,8 @@ namespace gameoverlay::d3d9
         pres_params.BackBufferCount = 1;
 
         CComPtr<IDirect3DDevice9> device{};
-        direct3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetDesktopWindow(),
-                               D3DCREATE_SOFTWARE_VERTEXPROCESSING | D3DCREATE_MULTITHREADED, &pres_params, &device);
+        direct3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, GetDesktopWindow(), D3DCREATE_MIXED_VERTEXPROCESSING,
+                               &pres_params, &device);
         if (!device)
         {
             return;
@@ -115,15 +115,15 @@ namespace gameoverlay::d3d9
         auto& hooks = get_hooks();
 
         auto* device_present = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Present);
-        hooks.device_present.create(device_present, device_present_stub);
+        hooks.device_present.create(device_present, &device_present_stub);
 
         auto* device_reset = *utils::hook::get_vtable_entry(&*device, &IDirect3DDevice9::Reset);
-        hooks.device_reset.create(device_reset, device_reset_stub);
+        hooks.device_reset.create(device_reset, &device_reset_stub);
 
         if (swap_chain)
         {
             auto* swap_chain_present = *utils::hook::get_vtable_entry(&*swap_chain, &IDirect3DSwapChain9::Present);
-            hooks.swap_chain_present.create(swap_chain_present, swap_chain_present_stub);
+            hooks.swap_chain_present.create(swap_chain_present, &swap_chain_present_stub);
         }
     }
 
