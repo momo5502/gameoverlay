@@ -16,7 +16,6 @@ just like rendering offscreen browsers with CEF.
 
 | Engine     | x86 | x64 |
 |:---------- |:---:|:---:|
-| DirectDraw | ✖ | ✖ |
 | DirectX 8  | ✔ |   |
 | DirectX 9  | ✔ | ✔ |
 | DirectX 10 | ✔ | ✔ |
