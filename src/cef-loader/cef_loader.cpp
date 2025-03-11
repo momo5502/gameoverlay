@@ -2,6 +2,8 @@
 
 #include <utils/nt.hpp>
 
+#include <delayimp.h>
+
 namespace cef_loader
 {
     namespace
@@ -12,7 +14,7 @@ namespace cef_loader
             return self.get_folder();
         }
 
-        void load_cef_library()
+        void* load_cef_library()
         {
             const auto cef_path = get_cef_path();
             const auto cef_lib = cef_path / "libcef.dll";
@@ -24,10 +26,28 @@ namespace cef_loader
 
             RemoveDllDirectory(cookie);
 
-            if (!library)
+            if (library)
             {
-                throw std::runtime_error("Failed to load cef");
+                return library;
             }
+
+            throw std::runtime_error("Failed to load cef");
+        }
+
+        FARPROC WINAPI delay_load_hook(unsigned /*dliNotify*/, const PDelayLoadInfo pdli)
+        {
+            constexpr std::string_view cef = "libcef.dll";
+            if (pdli->szDll != cef)
+            {
+                return nullptr;
+            }
+
+            auto* cef_dll = static_cast<HMODULE>(load_cef());
+            auto* name = pdli->dlp.fImportByName //
+                             ? pdli->dlp.szProcName
+                             : MAKEINTRESOURCEA(pdli->dlp.dwOrdinal);
+
+            return GetProcAddress(cef_dll, name);
         }
     }
 
@@ -36,12 +56,15 @@ namespace cef_loader
         return get_own_directory() / "cef";
     }
 
-    void load_cef()
+    void* load_cef()
     {
-        static const auto x = [] {
-            load_cef_library();
-            return 0;
-        }();
-        (void)x;
+        static const auto cef = load_cef_library();
+        return cef;
     }
 }
+
+EXTERN_C
+#ifndef DELAYIMP_INSECURE_WRITABLE_HOOKS
+const
+#endif
+    PfnDliHook __pfnDliNotifyHook2 = cef_loader::delay_load_hook;
