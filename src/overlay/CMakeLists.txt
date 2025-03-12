@@ -16,5 +16,6 @@ target_link_libraries(overlay PUBLIC
   backend-d3d-legacy
   backend-dxgi
   backend-opengl
+  backend-vulkan
   browser
 )

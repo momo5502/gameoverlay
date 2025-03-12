@@ -2,6 +2,8 @@
 
 #include <canvas.hpp>
 
+#include "vulkan_include.hpp"
+
 namespace gameoverlay::vulkan
 {
     class vulkan_canvas : public fixed_canvas

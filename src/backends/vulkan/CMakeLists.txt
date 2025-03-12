@@ -16,9 +16,10 @@ target_link_libraries(backend-vulkan PUBLIC
   backend
 )
 
-#target_link_libraries(backend-vulkan PRIVATE
-# libglew_static
-#)
+target_link_libraries(backend-vulkan PRIVATE
+  Vulkan::Headers
+  Vulkan::Loader
+)
 
 target_include_directories(backend-vulkan PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/include"

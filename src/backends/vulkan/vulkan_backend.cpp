@@ -9,8 +9,6 @@ namespace gameoverlay::vulkan
     {
         struct hooks
         {
-            utils::hook::detour swap_buffers{};
-            utils::hook::detour delete_dc{};
         };
 
         hooks& get_hooks()
@@ -36,22 +34,6 @@ namespace gameoverlay::vulkan
                 },
                 hdc);
         }
-
-        BOOL WINAPI swap_buffers_stub(const HDC hdc)
-        {
-            draw_frame(hdc);
-            return get_hooks().swap_buffers.invoke_stdcall<BOOL>(hdc);
-        }
-
-        BOOL WINAPI delete_dc_stub(const HDC hdc)
-        {
-            if (g_backend)
-            {
-                g_backend->erase(hdc);
-            }
-
-            return get_hooks().delete_dc.invoke_stdcall<BOOL>(hdc);
-        }
     }
 
     vulkan_backend::~vulkan_backend()
@@ -64,10 +46,15 @@ namespace gameoverlay::vulkan
     {
         g_backend = this;
 
-        auto& hooks = get_hooks();
+        VkInstanceCreateInfo create_info = {};
+        constexpr const char* instance_extension = "VK_KHR_surface";
 
-        hooks.swap_buffers.create(&::SwapBuffers, &swap_buffers_stub);
-        hooks.delete_dc.create(&::DeleteDC, &delete_dc_stub);
+        create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        create_info.enabledExtensionCount = 1;
+        create_info.ppEnabledExtensionNames = &instance_extension;
+
+        VkInstance g_Instance{};
+        vkCreateInstance(&create_info, nullptr, &g_Instance);
     }
 
     std::unique_ptr<backend> create_backend(backend::owned_handler h)

@@ -7,3 +7,9 @@
 [submodule "deps/dxsdk"]
 	path = deps/dxsdk
 	url = ../dxsdk.git
+[submodule "deps/vulkan-headers"]
+	path = deps/vulkan-headers
+	url = https://github.com/KhronosGroup/Vulkan-Headers.git
+[submodule "deps/vulkan-loader"]
+	path = deps/vulkan-loader
+	url = https://github.com/KhronosGroup/Vulkan-Loader.git

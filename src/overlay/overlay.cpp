@@ -8,6 +8,7 @@
 #include <backend_d3d9.hpp>
 #include <backend_dxgi.hpp>
 #include <backend_opengl.hpp>
+#include <backend_vulkan.hpp>
 
 #include <utils/string.hpp>
 #include <utils/concurrency.hpp>
@@ -110,6 +111,7 @@ namespace gameoverlay
                 backends.emplace_back(d3d9::create_backend(this->make_handler()));
                 backends.emplace_back(dxgi::create_backend(this->make_handler()));
                 backends.emplace_back(opengl::create_backend(this->make_handler()));
+                backends.emplace_back(vulkan::create_backend(this->make_handler()));
 
                 ui.create_browser(*this, "file:///C:/Users/mauri/Desktop/gameoverlay/src/data/main.html");
             }
