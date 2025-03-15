@@ -7,14 +7,20 @@
 
 namespace gameoverlay::vulkan
 {
-    class vulkan_renderer : public window_renderer<renderer_type::vulkan>
+    class vulkan_renderer : public typed_renderer<renderer_type::vulkan>
     {
       public:
-        vulkan_renderer(owned_handler h, HDC hdc);
-        void draw_frame();
+        vulkan_renderer(owned_handler h, VkDevice device, VkSwapchainKHR swap_chain);
+        void draw_frame(VkQueue queue);
+
+        HWND get_window() const override
+        {
+            return nullptr;
+        }
 
       private:
-        HDC hdc_{};
+        VkDevice device_{};
+        VkSwapchainKHR swap_chain_{};
         std::unique_ptr<vulkan_canvas> canvas_{};
     };
 }
