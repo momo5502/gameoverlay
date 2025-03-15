@@ -77,15 +77,15 @@ namespace gameoverlay::dxgi
             };
         }
 
-        dimensions get_buffer_dimensions(IDXGISwapChain& swap_chain, const backend_type type)
+        dimensions get_buffer_dimensions(IDXGISwapChain& swap_chain, const renderer_type type)
         {
             switch (type)
             {
-            case backend_type::d3d10:
+            case renderer_type::d3d10:
                 return get_d3d10_dimensions(swap_chain);
-            case backend_type::d3d11:
+            case renderer_type::d3d11:
                 return get_d3d11_dimensions(swap_chain);
-            case backend_type::d3d12:
+            case renderer_type::d3d12:
                 return get_d3d12_dimensions(swap_chain);
             default:
                 return {};
@@ -93,15 +93,15 @@ namespace gameoverlay::dxgi
         }
 
         std::unique_ptr<dxgi_canvas> create_canvas(d3d12_command_queue_store& store, IDXGISwapChain& swap_chain,
-                                                   const backend_type type, const dimensions dim)
+                                                   const renderer_type type, const dimensions dim)
         {
             switch (type)
             {
-            case backend_type::d3d10:
+            case renderer_type::d3d10:
                 return std::make_unique<d3dx_canvas<d3d10_traits>>(swap_chain, dim);
-            case backend_type::d3d11:
+            case renderer_type::d3d11:
                 return std::make_unique<d3dx_canvas<d3d11_traits>>(swap_chain, dim);
-            case backend_type::d3d12: {
+            case renderer_type::d3d12: {
                 return std::make_unique<d3d12_canvas>(store, *query_interface<IDXGISwapChain3>(swap_chain), dim);
             }
 
@@ -120,21 +120,21 @@ namespace gameoverlay::dxgi
         const auto device10 = get_device<ID3D10Device>(swap_chain);
         if (device10)
         {
-            this->type_ = backend_type::d3d10;
+            this->type_ = renderer_type::d3d10;
             return;
         }
 
         const auto device11 = get_device<ID3D11Device>(swap_chain);
         if (device11)
         {
-            this->type_ = backend_type::d3d11;
+            this->type_ = renderer_type::d3d11;
             return;
         }
 
         const auto device12 = get_device<ID3D12Device>(swap_chain);
         if (device12)
         {
-            this->type_ = backend_type::d3d12;
+            this->type_ = renderer_type::d3d12;
         }
     }
 
@@ -143,7 +143,7 @@ namespace gameoverlay::dxgi
         return this->window_;
     }
 
-    backend_type dxgi_renderer::get_backend_type() const
+    renderer_type dxgi_renderer::get_type() const
     {
         return this->type_;
     }
