@@ -36,8 +36,6 @@ namespace gameoverlay
 
         virtual ~backend() = default;
 
-        virtual backend_type get_type() const = 0;
-
         virtual void on_window_destruction(const HWND window)
         {
             (void)window;
@@ -47,17 +45,12 @@ namespace gameoverlay
         owned_handler handler_{};
     };
 
-    template <backend_type Type, typename Renderer, typename RendererKey>
+    template <typename Renderer, typename RendererKey>
         requires(std::is_base_of_v<renderer, Renderer>)
     class typed_backed : public backend
     {
       public:
         using backend::backend;
-
-        backend_type get_type() const override
-        {
-            return Type;
-        }
 
         void on_window_destruction(const HWND window) override
         {
