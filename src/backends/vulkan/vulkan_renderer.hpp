@@ -7,7 +7,7 @@
 
 namespace gameoverlay::vulkan
 {
-    class vulkan_renderer : public window_renderer<backend_type::vulkan>
+    class vulkan_renderer : public window_renderer<renderer_type::vulkan>
     {
       public:
         vulkan_renderer(owned_handler h, HDC hdc);

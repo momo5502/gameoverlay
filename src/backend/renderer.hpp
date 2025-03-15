@@ -1,6 +1,6 @@
 #pragma once
 #include "canvas.hpp"
-#include "backend_type.hpp"
+#include "renderer_type.hpp"
 
 #include <memory>
 #include <utils/win.hpp>
@@ -31,7 +31,7 @@ namespace gameoverlay
 
         virtual ~renderer() = default;
 
-        virtual backend_type get_backend_type() const = 0;
+        virtual renderer_type get_type() const = 0;
         virtual HWND get_window() const = 0;
 
       protected:
@@ -44,7 +44,7 @@ namespace gameoverlay
         owned_handler handler_{};
     };
 
-    template <backend_type Type>
+    template <renderer_type Type>
     class typed_renderer : public renderer
     {
       public:
@@ -52,13 +52,13 @@ namespace gameoverlay
 
         using renderer::renderer;
 
-        backend_type get_backend_type() const override
+        renderer_type get_type() const override
         {
             return type;
         }
     };
 
-    template <backend_type Type>
+    template <renderer_type Type>
     class window_renderer : public typed_renderer<Type>
     {
       public:

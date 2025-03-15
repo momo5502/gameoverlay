@@ -17,7 +17,7 @@ namespace gameoverlay::dxgi
         void draw_frame();
 
         HWND get_window() const override;
-        backend_type get_backend_type() const override;
+        renderer_type get_type() const override;
 
         void before_resize() const;
 
@@ -26,7 +26,7 @@ namespace gameoverlay::dxgi
 
         bool canvas_failed_{false};
         HWND window_{};
-        backend_type type_{backend_type::unknown};
+        renderer_type type_{renderer_type::unknown};
 
         CComPtr<IDXGISwapChain> swap_chain_{};
         std::unique_ptr<dxgi_canvas> canvas_{};

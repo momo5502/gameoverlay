@@ -5,7 +5,6 @@
 #include <utils/concurrency.hpp>
 #include <utils/class_helper.hpp>
 
-#include "backend_type.hpp"
 #include "renderer.hpp"
 
 namespace gameoverlay

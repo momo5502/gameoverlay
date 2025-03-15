@@ -2,7 +2,7 @@
 
 namespace gameoverlay
 {
-    enum class backend_type
+    enum class renderer_type
     {
         unknown,
         d3d8,
@@ -14,9 +14,9 @@ namespace gameoverlay
         vulkan,
     };
 
-    inline const char* get_backend_type_name(const backend_type type)
+    inline const char* get_renderer_type_name(const renderer_type type)
     {
-        using enum backend_type;
+        using enum renderer_type;
 
         switch (type)
         {

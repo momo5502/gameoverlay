@@ -69,7 +69,7 @@ namespace gameoverlay
 
             void on_new_renderer(renderer& r) override
             {
-                OutputDebugStringA(utils::string::va("New renderer: %s", get_backend_type_name(r.get_backend_type())));
+                OutputDebugStringA(utils::string::va("New renderer: %s", get_renderer_type_name(r.get_type())));
             }
         };
 

@@ -31,7 +31,7 @@ namespace gameoverlay::d3d_legacy
         }
     }
 
-    template <backend_type Type, typename d3d_legacy_traits>
+    template <renderer_type Type, typename d3d_legacy_traits>
     class d3d_legacy_renderer : public window_renderer<Type>
     {
       public:
