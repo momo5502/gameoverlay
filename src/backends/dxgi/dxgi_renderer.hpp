@@ -26,7 +26,7 @@ namespace gameoverlay::dxgi
 
         bool canvas_failed_{false};
         HWND window_{};
-        backend_type type_{backend_type::dxgi};
+        backend_type type_{backend_type::unknown};
 
         CComPtr<IDXGISwapChain> swap_chain_{};
         std::unique_ptr<dxgi_canvas> canvas_{};
