@@ -112,7 +112,7 @@ namespace gameoverlay::opengl
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
             const auto bytes = width * height * 4;
-            const std::vector<uint8_t> buffer(bytes, 0xFF);
+            const std::vector<uint8_t> buffer(bytes, 0);
 
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0,
                          GL_RGBA, GL_UNSIGNED_BYTE, buffer.data());
@@ -222,7 +222,6 @@ namespace gameoverlay::opengl
             glBindTexture(GL_TEXTURE_2D, this->texture_);
 
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-            glBindVertexArray(0);
         }
         else
         {

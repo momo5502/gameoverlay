@@ -9,6 +9,7 @@ struct gl_vao_scope
     gl_vao_scope()
     {
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, detail::gl_ref(this->vao));
+        glBindVertexArray(0);
     }
 
     ~gl_vao_scope()
