@@ -53,6 +53,11 @@ namespace gameoverlay
 
         void on_window_destruction(const HWND window) override
         {
+            if (!window)
+            {
+                return;
+            }
+
             this->renderers_.access([&](renderers& m) {
                 std::erase_if(m, [&](const typename renderers::value_type& entry) {
                     return entry.second->get_window() == window; //
@@ -97,23 +102,10 @@ namespace gameoverlay
             });
         }
 
-        // Are these really needed?
-
-        template <typename Accessor, typename... Args>
-            requires(std::is_invocable_v<Accessor, Renderer&>)
-        void create_and_access_renderer(RendererKey key, const Accessor& accessor, Args&&... args)
-        {
-            auto renderer = this->construct_renderer(std::forward<Args>(args)...);
-            this->renderers_.access([&](renderers& r) {
-                auto* ptr = this->store_renderer(r, std::move(key), std::move(renderer));
-                accessor(*ptr);
-            });
-        }
-
         template <typename... Args>
-        void create_renderer(RendererKey key, Args&&... args)
+        bool create_renderer(RendererKey key, Args&&... args)
         {
-            this->create_and_access_renderer(std::move(key), [](Renderer&) {}, std::forward<Args>(args)...);
+            return this->create_or_access_renderer(std::move(key), [](Renderer&) {}, std::forward<Args>(args)...);
         }
 
         template <typename Predicate = bool (*)()>

@@ -102,7 +102,7 @@ namespace gameoverlay::vulkan
         struct hooks
         {
             utils::hook::detour queue_present{};
-            utils::hook::detour destroy_device{};
+            utils::hook::detour destroy_swap_chain{};
             utils::hook::detour acquire_next_image{};
             utils::hook::detour acquire_next_image_2{};
         };
@@ -116,30 +116,48 @@ namespace gameoverlay::vulkan
         // TODO: Synchronize access with object destruction
         vulkan_backend* g_backend{nullptr};
 
-        void draw_frame(const HDC hdc)
+        void create_renderer(const VkDevice device, const VkSwapchainKHR swapchain)
         {
-            if (!hdc || !g_backend)
+            if (g_backend)
+            {
+                g_backend->create_renderer(swapchain, device, swapchain);
+            }
+        }
+
+        void draw_frame(const VkSwapchainKHR swapchain, const VkQueue queue)
+        {
+            if (!g_backend)
             {
                 return;
             }
 
-            g_backend->create_or_access_renderer(
-                hdc,
-                [](vulkan_renderer& r) {
-                    r.draw_frame(); //
-                },
-                hdc);
+            g_backend->access_renderer(swapchain, [&](vulkan_renderer& r) {
+                r.draw_frame(queue); //
+            });
         }
 
-        void VKAPI_CALL destroy_device_stub(const VkDevice device, const VkAllocationCallbacks* allocator)
+        void remove_swap_chain(const VkSwapchainKHR swapchain)
         {
-            get_hooks().destroy_device.invoke_stdcall<void>(device, allocator);
+            if (!swapchain || !g_backend)
+            {
+                return;
+            }
+
+            g_backend->erase(swapchain);
+        }
+
+        void VKAPI_CALL destroy_swap_chain_stub(const VkDevice device, const VkSwapchainKHR swapchain,
+                                                const VkAllocationCallbacks* allocator)
+        {
+            remove_swap_chain(swapchain);
+            get_hooks().destroy_swap_chain.invoke_stdcall<void>(device, swapchain, allocator);
         }
 
         VkResult VKAPI_CALL acquire_next_image_stub(const VkDevice device, const VkSwapchainKHR swapchain,
                                                     const uint64_t timeout, const VkSemaphore semaphore,
                                                     const VkFence fence, uint32_t* image_index)
         {
+            create_renderer(device, swapchain);
             return get_hooks().acquire_next_image.invoke_stdcall<VkResult>(device, swapchain, timeout, semaphore, fence,
                                                                            image_index);
         }
@@ -148,11 +166,21 @@ namespace gameoverlay::vulkan
                                                       const VkAcquireNextImageInfoKHR* acquire_info,
                                                       uint32_t* image_index)
         {
+            if (acquire_info && acquire_info->swapchain)
+            {
+                create_renderer(device, acquire_info->swapchain);
+            }
+
             return get_hooks().acquire_next_image_2.invoke_stdcall<VkResult>(device, acquire_info, image_index);
         }
 
         VkResult VKAPI_CALL queue_present_stub(const VkQueue queue, const VkPresentInfoKHR* present_info)
         {
+            for (uint32_t i = 0; i < present_info->swapchainCount; ++i)
+            {
+                draw_frame(present_info->pSwapchains[i], queue);
+            }
+
             return get_hooks().queue_present.invoke_stdcall<VkResult>(queue, present_info);
         }
     }
@@ -174,11 +202,11 @@ namespace gameoverlay::vulkan
 
         auto& hooks = get_hooks();
 
-        auto* destroy_device = vkGetDeviceProcAddr(device, "vkDestroyDevice");
-        hooks.destroy_device.create(destroy_device, &destroy_device_stub);
-
         auto* queue_present = vkGetDeviceProcAddr(device, "vkQueuePresentKHR");
         hooks.queue_present.create(queue_present, &queue_present_stub);
+
+        auto* destroy_swap_chain = vkGetDeviceProcAddr(device, "vkDestroySwapchainKHR");
+        hooks.destroy_swap_chain.create(destroy_swap_chain, &destroy_swap_chain_stub);
 
         auto* acquire_next_image = vkGetDeviceProcAddr(device, "vkAcquireNextImageKHR");
         hooks.acquire_next_image.create(acquire_next_image, &acquire_next_image_stub);
