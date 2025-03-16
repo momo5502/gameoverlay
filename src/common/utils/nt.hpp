@@ -109,7 +109,17 @@ namespace utils::nt
         HMODULE module_;
     };
 
-    template <HANDLE InvalidHandle = nullptr>
+    inline HANDLE null_handle_value()
+    {
+        return nullptr;
+    }
+
+    inline HANDLE invalid_handle_value()
+    {
+        return INVALID_HANDLE_VALUE;
+    }
+
+    template <HANDLE(InvalidHandleProvider)()>
     class handle
     {
       public:
@@ -125,7 +135,7 @@ namespace utils::nt
             if (*this)
             {
                 CloseHandle(this->handle_);
-                this->handle_ = InvalidHandle;
+                this->handle_ = InvalidHandleProvider();
             }
         }
 
@@ -144,7 +154,7 @@ namespace utils::nt
             {
                 this->~handle();
                 this->handle_ = obj.handle_;
-                obj.handle_ = InvalidHandle;
+                obj.handle_ = InvalidHandleProvider();
             }
 
             return *this;
@@ -158,9 +168,9 @@ namespace utils::nt
             return *this;
         }
 
-        [[nodiscard]] operator bool() const
+        [[nodiscard]] explicit operator bool() const
         {
-            return this->handle_ != InvalidHandle;
+            return this->handle_ != InvalidHandleProvider();
         }
 
         [[nodiscard]] operator HANDLE() const
@@ -169,15 +179,18 @@ namespace utils::nt
         }
 
       private:
-        HANDLE handle_{InvalidHandle};
+        HANDLE handle_{InvalidHandleProvider()};
     };
+
+    using null_handle = handle<null_handle_value>;
+    using ihv_handle = handle<invalid_handle_value>;
 
     class registry_key
     {
       public:
         registry_key() = default;
 
-        registry_key(HKEY key)
+        registry_key(const HKEY key)
             : key_(key)
         {
         }

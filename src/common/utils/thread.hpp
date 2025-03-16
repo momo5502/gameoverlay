@@ -36,7 +36,7 @@ namespace utils::thread
         }
 
       private:
-        nt::handle<> handle_{};
+        nt::null_handle handle_{};
     };
 
     std::vector<DWORD> get_thread_ids();

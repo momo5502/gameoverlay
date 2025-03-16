@@ -21,7 +21,7 @@ namespace gameoverlay::dxgi
       private:
         d3d12_command_queue_store* store_{};
 
-        utils::nt::handle<> fence_event_{};
+        utils::nt::null_handle fence_event_{};
 
         CComPtr<IDXGISwapChain3> swap_chain_{};
         CComPtr<ID3D12Device> device_{};
