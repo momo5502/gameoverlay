@@ -175,7 +175,7 @@ namespace utils::nt
         {
             if (this != &obj)
             {
-                this->~handle();
+                this->close();
                 this->handle_ = obj.handle_;
                 obj.handle_ = InvalidHandleProvider();
             }
@@ -185,7 +185,7 @@ namespace utils::nt
 
         handle& operator=(HANDLE h) noexcept
         {
-            this->~handle();
+            this->close();
             this->handle_ = h;
 
             return *this;

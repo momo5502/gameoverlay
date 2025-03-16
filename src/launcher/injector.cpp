@@ -1,91 +1,22 @@
 #include "injector.hpp"
 
+#include <span>
 #include <utils/nt.hpp>
+#include <utils/io.hpp>
 #include <utils/string.hpp>
 #include <utils/finally.hpp>
 
-#include <TlHelp32.h>
+#include "pe.hpp"
+#include "process.hpp"
+#include "snapshot.hpp"
 
 namespace
 {
-    std::optional<DWORD> get_thread_exit_code(const HANDLE thread)
-    {
-        DWORD code{};
-        if (!GetExitCodeThread(thread, &code))
-        {
-            return std::nullopt;
-        }
-
-        return code;
-    }
-
-    std::optional<DWORD> get_process_exit_code(const HANDLE thread)
-    {
-        DWORD code{};
-        if (!GetExitCodeProcess(thread, &code))
-        {
-            return std::nullopt;
-        }
-
-        return code;
-    }
-
-    bool is_thread_running(const HANDLE process)
-    {
-        const auto code = get_thread_exit_code(process);
-        return code && *code == STILL_ACTIVE;
-    }
-
-    bool is_process_running(const HANDLE process)
-    {
-        const auto code = get_process_exit_code(process);
-        return code && *code == STILL_ACTIVE;
-    }
-
-    utils::nt::ihv_handle create_process_snapshot(const HANDLE process)
-    {
-        const auto process_id = GetProcessId(process);
-        utils::nt::ihv_handle snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, process_id);
-
-        if (snapshot && is_process_running(process))
-        {
-            return snapshot;
-        }
-
-        return {};
-    }
-
-    std::list<MODULEENTRY32> get_process_modules(const HANDLE process)
-    {
-        const auto snapshot = create_process_snapshot(process);
-        if (!snapshot)
-        {
-            return {};
-        }
-
-        std::list<MODULEENTRY32> modules{};
-
-        MODULEENTRY32 module_entry{};
-        module_entry.dwSize = sizeof(MODULEENTRY32);
-
-        if (!Module32First(snapshot, &module_entry))
-        {
-            return {};
-        }
-
-        do
-        {
-            modules.push_back(module_entry);
-        } while (Module32Next(snapshot, &module_entry));
-
-        return modules;
-    }
-
     uint8_t* get_process_module_base(const HANDLE process, std::string module_name)
     {
         module_name = utils::string::to_lower(module_name);
 
-        const auto modules = get_process_modules(process);
+        const auto modules = snapshot::get_modules(process);
 
         for (const auto& mod : modules)
         {
@@ -135,26 +66,20 @@ bool injection::release_memory()
     return free_memory(p, memory);
 }
 
-bool injection::done() const
-{
-    return !this->thread_ || !is_thread_running(this->thread_);
-}
-
-bool injection::succeeded() const
-{
-    return this->thread_ && get_thread_exit_code(this->thread_).value_or(1) == 0;
-}
-
-bool injection::await() const
+bool injection::wait_for_thread(const bool no_wait)
 {
     if (!this->thread_)
+    {
+        return true;
+    }
+
+    if (WaitForSingleObject(this->thread_, no_wait ? 0 : INFINITE) != WAIT_OBJECT_0)
     {
         return false;
     }
 
-    WaitForSingleObject(this->thread_, INFINITE);
-
-    return this->succeeded();
+    this->release_memory();
+    return true;
 }
 
 injection::~injection()
@@ -172,14 +97,14 @@ injection::injection(utils::nt::null_handle process, utils::nt::null_handle thre
 
 injector::injector()
 {
-    // TODO: Load LoadLibraryW RVAs
+    // TODO: Handle 32 on 32
+    this->load_lib_rva_64 = pe::find_export_rva(R"(C:\Windows\System32\kernel32.dll)", "LoadLibraryW");
+    this->load_lib_rva_32 = pe::find_export_rva(R"(C:\Windows\SysWOW64\kernel32.dll)", "LoadLibraryW");
 }
 
 injection injector::inject(const DWORD process_id, const std::filesystem::path& dll) const
 {
-    constexpr auto access =
-        SYNCHRONIZE | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_SUSPEND_RESUME | PROCESS_QUERY_INFORMATION;
-    utils::nt::null_handle process = OpenProcess(access, FALSE, process_id);
+    utils::nt::null_handle process = OpenProcess(PROCESS_ALL_ACCESS, FALSE, process_id);
 
     if (!process)
     {
@@ -194,7 +119,8 @@ injection injector::inject(utils::nt::null_handle process, const std::filesystem
     const auto kernel32 = get_process_module_base(process, "kernel32.dll");
 
     const auto dll_name = dll.wstring();
-    auto* memory = allocate_memory(process, (dll_name.size() + 1) * 2);
+    const auto dll_name_size = (dll_name.size() + 1) * 2;
+    auto* memory = allocate_memory(process, dll_name_size);
 
     if (!memory)
     {
@@ -204,6 +130,13 @@ injection injector::inject(utils::nt::null_handle process, const std::filesystem
     auto releaser = utils::finally([&] {
         free_memory(process, memory); //
     });
+
+    SIZE_T written{};
+    const auto res = WriteProcessMemory(process, memory, dll_name.c_str(), dll_name_size, &written);
+    if (!res || written != dll_name_size)
+    {
+        return {};
+    }
 
     const auto rva = is_64_bit_process(process) ? this->load_lib_rva_64 : this->load_lib_rva_32;
     auto* start_address = reinterpret_cast<LPTHREAD_START_ROUTINE>(kernel32 + rva);

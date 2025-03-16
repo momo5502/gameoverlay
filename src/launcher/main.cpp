@@ -1,15 +1,26 @@
-#include <utils/win.hpp>
 #include <cstdlib>
 #include <stdexcept>
 
 #include "injector.hpp"
+#include "snapshot.hpp"
 
 namespace
 {
     void run()
     {
         injector i{};
-        (void)i;
+
+        const auto file = utils::nt::library::get_by_address(run).get_folder() / "overlay.dll";
+
+        for (const auto& process : snapshot::get_processes())
+        {
+            if (std::filesystem::path(process.szExeFile).filename() == "bird.exe")
+            {
+                printf("Injecting into: %X\n", process.th32ProcessID);
+                const bool res = i.inject(process.th32ProcessID, file);
+                printf("Result: %s\n", res ? "sucess" : "failure");
+            }
+        }
     }
 }
 

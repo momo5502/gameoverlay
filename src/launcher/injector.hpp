@@ -17,12 +17,20 @@ class injection
     injection(injection&&) noexcept = default;
     injection& operator=(injection&&) noexcept = default;
 
-    operator bool();
+    operator bool() const
+    {
+        return this->thread_;
+    }
 
-    bool done() const;
-    bool succeeded() const;
+    bool done()
+    {
+        return this->wait_for_thread(true);
+    }
 
-    bool await() const;
+    bool await()
+    {
+        return this->wait_for_thread(false);
+    }
 
   private:
     utils::nt::null_handle process_{};
@@ -33,6 +41,7 @@ class injection
     injection(utils::nt::null_handle process, utils::nt::null_handle thread, void* memory);
 
     bool release_memory();
+    bool wait_for_thread(bool no_wait);
 };
 
 class injector
@@ -42,16 +51,6 @@ class injector
 
     injection inject(DWORD process_id, const std::filesystem::path& dll) const;
     injection inject(utils::nt::null_handle process, const std::filesystem::path& dll) const;
-
-    bool inject_and_await(const DWORD process_id, const std::filesystem::path& dll)
-    {
-        return this->inject(process_id, dll).await();
-    }
-
-    bool inject_and_await(utils::nt::null_handle process, const std::filesystem::path& dll)
-    {
-        return this->inject(std::move(process), dll).await();
-    }
 
   private:
     uint32_t load_lib_rva_32{};
