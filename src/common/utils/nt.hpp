@@ -132,15 +132,38 @@ namespace utils::nt
 
         ~handle()
         {
-            if (*this)
-            {
-                CloseHandle(this->handle_);
-                this->handle_ = InvalidHandleProvider();
-            }
+            this->close();
         }
 
-        handle(const handle&) = delete;
-        handle& operator=(const handle&) = delete;
+        handle(const handle& obj)
+            : handle()
+        {
+            this->operator=(obj);
+        }
+
+        handle& operator=(const handle& obj)
+        {
+            if (this != &obj)
+            {
+                this->close();
+
+                if (!obj)
+                {
+                    return *this;
+                }
+
+                const auto res = DuplicateHandle(GetCurrentProcess(), obj.handle_, GetCurrentProcess(), &this->handle_,
+                                                 0, FALSE, DUPLICATE_SAME_ACCESS);
+
+                if (!res)
+                {
+                    this->handle_ = InvalidHandleProvider();
+                    throw std::runtime_error("Failed to duplicate handle");
+                }
+            }
+
+            return *this;
+        }
 
         handle(handle&& obj) noexcept
             : handle()
@@ -176,6 +199,15 @@ namespace utils::nt
         [[nodiscard]] operator HANDLE() const
         {
             return this->handle_;
+        }
+
+        void close()
+        {
+            if (*this)
+            {
+                CloseHandle(this->handle_);
+                this->handle_ = InvalidHandleProvider();
+            }
         }
 
       private:
