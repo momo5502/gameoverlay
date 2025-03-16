@@ -3,6 +3,8 @@
 #include <backend_vulkan.hpp>
 #include <utils/hook.hpp>
 
+#include "utils/string.hpp"
+
 namespace gameoverlay::vulkan
 {
     namespace
@@ -102,6 +104,7 @@ namespace gameoverlay::vulkan
         struct hooks
         {
             utils::hook::detour queue_present{};
+            utils::hook::detour create_swap_chain{};
             utils::hook::detour destroy_swap_chain{};
             utils::hook::detour acquire_next_image{};
             utils::hook::detour acquire_next_image_2{};
@@ -116,11 +119,15 @@ namespace gameoverlay::vulkan
         // TODO: Synchronize access with object destruction
         vulkan_backend* g_backend{nullptr};
 
-        void create_renderer(const VkDevice device, const VkSwapchainKHR swapchain)
+        void create_renderer(const VkDevice device, const VkSwapchainKHR swapchain,
+                             const VkSwapchainCreateInfoKHR& info)
         {
             if (g_backend)
             {
-                g_backend->create_renderer(swapchain, device, swapchain);
+                OutputDebugStringA(
+                    utils::string::va("Swap chain: %dx%d", info.imageExtent.width, info.imageExtent.height));
+
+                g_backend->create_renderer(swapchain, device, swapchain, info);
             }
         }
 
@@ -146,6 +153,19 @@ namespace gameoverlay::vulkan
             g_backend->erase(swapchain);
         }
 
+        VkResult VKAPI_CALL create_swap_chain_stub(const VkDevice device, const VkSwapchainCreateInfoKHR* create_info,
+                                                   const VkAllocationCallbacks* allocator, VkSwapchainKHR* swapchain)
+        {
+            const auto info = *create_info;
+
+            const auto res =
+                get_hooks().create_swap_chain.invoke_stdcall<VkResult>(device, create_info, allocator, swapchain);
+
+            create_renderer(device, *swapchain, info);
+
+            return res;
+        }
+
         void VKAPI_CALL destroy_swap_chain_stub(const VkDevice device, const VkSwapchainKHR swapchain,
                                                 const VkAllocationCallbacks* allocator)
         {
@@ -157,7 +177,7 @@ namespace gameoverlay::vulkan
                                                     const uint64_t timeout, const VkSemaphore semaphore,
                                                     const VkFence fence, uint32_t* image_index)
         {
-            create_renderer(device, swapchain);
+            // create_renderer(device, swapchain);
             return get_hooks().acquire_next_image.invoke_stdcall<VkResult>(device, swapchain, timeout, semaphore, fence,
                                                                            image_index);
         }
@@ -168,7 +188,7 @@ namespace gameoverlay::vulkan
         {
             if (acquire_info && acquire_info->swapchain)
             {
-                create_renderer(device, acquire_info->swapchain);
+                //  create_renderer(device, acquire_info->swapchain);
             }
 
             return get_hooks().acquire_next_image_2.invoke_stdcall<VkResult>(device, acquire_info, image_index);
@@ -204,6 +224,9 @@ namespace gameoverlay::vulkan
 
         auto* queue_present = vkGetDeviceProcAddr(device, "vkQueuePresentKHR");
         hooks.queue_present.create(queue_present, &queue_present_stub);
+
+        auto* create_swap_chain = vkGetDeviceProcAddr(device, "vkCreateSwapchainKHR");
+        hooks.create_swap_chain.create(create_swap_chain, &create_swap_chain_stub);
 
         auto* destroy_swap_chain = vkGetDeviceProcAddr(device, "vkDestroySwapchainKHR");
         hooks.destroy_swap_chain.create(destroy_swap_chain, &destroy_swap_chain_stub);

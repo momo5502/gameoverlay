@@ -10,7 +10,8 @@ namespace gameoverlay::vulkan
     class vulkan_renderer : public typed_renderer<renderer_type::vulkan>
     {
       public:
-        vulkan_renderer(owned_handler h, VkDevice device, VkSwapchainKHR swap_chain);
+        vulkan_renderer(owned_handler h, VkDevice device, VkSwapchainKHR swap_chain,
+                        const VkSwapchainCreateInfoKHR& info);
         void draw_frame(VkQueue queue);
 
         HWND get_window() const override
@@ -21,6 +22,7 @@ namespace gameoverlay::vulkan
       private:
         VkDevice device_{};
         VkSwapchainKHR swap_chain_{};
+        VkSwapchainCreateInfoKHR info_{};
         std::unique_ptr<vulkan_canvas> canvas_{};
     };
 }
