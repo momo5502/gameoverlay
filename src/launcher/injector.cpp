@@ -29,6 +29,22 @@ namespace
         return nullptr;
     }
 
+    uint8_t* try_get_process_module_base(const HANDLE process, const std::string& module_name)
+    {
+        for (size_t i = 0; i < 3; ++i)
+        {
+            auto* base = get_process_module_base(process, module_name);
+            if (base)
+            {
+                return base;
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+
+        return nullptr;
+    }
+
     uint8_t* allocate_memory(const HANDLE process, const size_t size, const uint32_t permissions = PAGE_READWRITE)
     {
         return static_cast<uint8_t*>(VirtualAllocEx(process, nullptr, size, MEM_COMMIT, permissions));
@@ -116,7 +132,11 @@ injection injector::inject(const DWORD process_id, const std::filesystem::path& 
 
 injection injector::inject(utils::nt::null_handle process, const std::filesystem::path& dll) const
 {
-    const auto kernel32 = get_process_module_base(process, "kernel32.dll");
+    const auto kernel32 = try_get_process_module_base(process, "kernel32.dll");
+    if (!kernel32)
+    {
+        return {};
+    }
 
     const auto dll_name = dll.wstring();
     const auto dll_name_size = (dll_name.size() + 1) * 2;
