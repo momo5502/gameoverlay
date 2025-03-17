@@ -48,6 +48,12 @@ namespace gameoverlay
         return CefExecuteProcess(get_cef_main_args(), new cef_ui_app(), nullptr);
     }
 
+    std::filesystem::path get_cache_directory()
+    {
+        const auto temp_dir = std::filesystem::temp_directory_path();
+        return temp_dir / "cef-cache" / std::to_string(GetCurrentProcessId());
+    }
+
     void cef_ui::ui_runner()
     {
         {
@@ -70,7 +76,7 @@ namespace gameoverlay
             CefString(&settings.locales_dir_path) = cef_path / "locales";
             CefString(&settings.resources_dir_path) = cef_path;
             CefString(&settings.log_file) = own_dir / "cef_data/debug.log";
-            CefString(&settings.cache_path) = own_dir / "cef_data/cache";
+            CefString(&settings.cache_path) = get_cache_directory();
             CefString(&settings.locale) = "en-US";
 
             CefInitialize(get_cef_main_args(), settings, new cef_ui_app(), nullptr);
