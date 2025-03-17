@@ -191,6 +191,36 @@ namespace utils::nt
             return *this;
         }
 
+        bool operator==(const HANDLE h) const
+        {
+            if (this->handle_ == h)
+            {
+                return true;
+            }
+
+            if (!*this || h == InvalidHandleProvider())
+            {
+                return false;
+            }
+
+            return CompareObjectHandles(this->handle_, h) != FALSE;
+        }
+
+        bool operator!=(const HANDLE h) const
+        {
+            return !(*this == h);
+        }
+
+        bool operator==(const handle& h) const
+        {
+            return this->operator==(h.handle_);
+        }
+
+        bool operator!=(const handle& h) const
+        {
+            return !(*this == h);
+        }
+
         [[nodiscard]] explicit operator bool() const
         {
             return this->handle_ != InvalidHandleProvider();
