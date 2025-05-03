@@ -23,3 +23,7 @@ just like rendering offscreen browsers with CEF.
 | DirectX 12 | ✅ | ✅ |
 | OpenGL     | ✅ | ✅ |
 | Vulkan     | ⛔ | ⛔ |
+
+## Preview
+
+<img src="./docs/preview.jpg" />
