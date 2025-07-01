@@ -4,8 +4,8 @@ namespace gameoverlay
 {
     cef_ui_app::cef_ui_app() = default;
 
-    void cef_ui_app::OnContextReleased(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
-                                       CefRefPtr<CefV8Context> context)
+    void cef_ui_app::OnContextReleased(CefRefPtr<CefBrowser> /*browser*/, CefRefPtr<CefFrame> /*frame*/,
+                                       CefRefPtr<CefV8Context> /*context*/)
     {
     }
 
@@ -13,8 +13,8 @@ namespace gameoverlay
     {
     }
 
-    void cef_ui_app::OnContextCreated(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
-                                      CefRefPtr<CefV8Context> context)
+    void cef_ui_app::OnContextCreated(CefRefPtr<CefBrowser> /*browser*/, CefRefPtr<CefFrame> /*frame*/,
+                                      CefRefPtr<CefV8Context> /*context*/)
     {
     }
 
